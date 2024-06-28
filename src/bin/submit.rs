@@ -3,20 +3,16 @@ use icfpc2024::icfp::{
     evaluator::Evaluator,
     parser::{Node, Parser},
     tokenizer::Tokenizer,
-    util::{convert_string, deconvert_string},
+    util::deconvert_string,
 };
 use reqwest;
+use std::env;
 use std::time;
-use std::{env, io::stdin};
-
-use serde::{Deserialize, Serialize};
 
 // =========== CONFIG ===========
 const API_URL: &str = "https://boundvariable.space/communicate";
-const COMMAND: &str = "get spaceship";
-const SAVE_DIR: &str = "downloads";
-const START_ID: usize = 22;
-const END_ID: usize = 25;
+const COMMAND: &str = "solve spaceship";
+const LOAD_DIR: &str = "answers/spaceship";
 // ==============================
 
 struct Env {
@@ -33,10 +29,20 @@ async fn main() {
 
     let client = reqwest::Client::new();
 
-    std::fs::create_dir_all(SAVE_DIR).unwrap();
-    for i in START_ID..=END_ID {
-        eprintln!("downloading id: {}", i);
-        let text = deconvert_string(format!("{}{}", COMMAND, i));
+    // scan loading dir
+    let files = std::fs::read_dir(LOAD_DIR).unwrap();
+
+    for file in files {
+        let file = file.unwrap();
+        let path = file.path();
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        let id = filename.split('.').next().unwrap();
+        let id = id.parse::<usize>().unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        eprintln!("submitting id: {}", id);
+        let text = format!("{}{} {}", COMMAND, id, text);
+        eprintln!("submitting text: {}", text);
+        let text = deconvert_string(text);
         let command = format!("S{}", text);
 
         let res = client
@@ -57,7 +63,7 @@ async fn main() {
                     Node::String(text) => text,
                     _ => panic!("Result is not a string"),
                 };
-                std::fs::write(format!("{}/{}.txt", SAVE_DIR, i), text).unwrap();
+                println!("{}", text);
             }
             Err(e) => {
                 eprintln!("Error: {:?}", e);
