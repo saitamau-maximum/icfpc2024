@@ -12,6 +12,7 @@ pub enum Node {
     Primitive(Primitive),
     UnaryOperator((String, Box<Node>)),
     BinaryOperator((String, Box<Node>, Box<Node>)),
+    If(Box<Node>, Box<Node>, Box<Node>),
 }
 
 pub struct Parser<'a> {
@@ -47,6 +48,7 @@ impl<'a> Parser<'a> {
             }
             Token::UnaryOperator(_) => self.parse_unary(),
             Token::BinaryOperator(_) => self.parse_binary(),
+            Token::If => self.parse_if(),
             _ => panic!("Expected integer or unary operator"),
         }
     }
@@ -70,6 +72,14 @@ impl<'a> Parser<'a> {
         let left = Box::new(self.parse_node());
         let right = Box::new(self.parse_node());
         Node::BinaryOperator((operator, left, right))
+    }
+
+    fn parse_if(&mut self) -> Node {
+        self.position += 1;
+        let condition = Box::new(self.parse_node());
+        let then_branch = Box::new(self.parse_node());
+        let else_branch = Box::new(self.parse_node());
+        Node::If(condition, then_branch, else_branch)
     }
 }
 
@@ -153,6 +163,32 @@ mod tests {
                     Box::new(Node::Primitive(Primitive::Integer(5)))
                 )))
             ))
+        );
+    }
+
+    #[test]
+    fn test_parse_if() {
+        let tokens = vec![
+            Token::If,
+            Token::BinaryOperator(">".to_string()),
+            Token::Integer(2),
+            Token::Integer(3),
+            Token::String("yes".to_string()),
+            Token::String("no".to_string()),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::If(
+                Box::new(Node::BinaryOperator((
+                    ">".to_string(),
+                    Box::new(Node::Primitive(Primitive::Integer(2))),
+                    Box::new(Node::Primitive(Primitive::Integer(3)))
+                ))),
+                Box::new(Node::Primitive(Primitive::String("yes".to_string()))),
+                Box::new(Node::Primitive(Primitive::String("no".to_string())))
+            )
         );
     }
 }
