@@ -1,4 +1,4 @@
-use crate::parser::{Node, Primitive};
+use crate::parser::Node;
 use crate::util::{convert_integer, convert_string, deconvert_integer};
 
 pub struct Evaluator {
@@ -10,13 +10,16 @@ impl Evaluator {
         Evaluator { node }
     }
 
-    pub fn evaluate(&self) -> Primitive {
+    pub fn evaluate(&self) -> Node {
         self.evaluate_node(&self.node)
     }
 
-    fn evaluate_node(&self, node: &Node) -> Primitive {
+    fn evaluate_node(&self, node: &Node) -> Node {
         match node {
-            Node::Primitive(primitive) => primitive.clone(),
+            Node::Integer(_) => node.clone(),
+            Node::String(_) => node.clone(),
+            Node::Boolean(_) => node.clone(),
+            Node::Variable(_) => node.clone(),
             Node::UnaryOperator(operator, operand) => {
                 let result = self.evaluate_node(operand);
                 self.evaluate_unary_operator(operator, result)
@@ -25,30 +28,30 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_unary_operator(&self, operator: &str, operand: Primitive) -> Primitive {
+    fn evaluate_unary_operator(&self, operator: &str, operand: Node) -> Node {
         match operator {
             "-" => match operand {
-                Primitive::Integer(value) => Primitive::Integer(-value),
+                Node::Integer(value) => Node::Integer(-value),
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
             },
             "!" => match operand {
-                Primitive::Boolean(value) => Primitive::Boolean(!value),
+                Node::Boolean(value) => Node::Boolean(!value),
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
             },
             // string to int
             "#" => match operand {
-                Primitive::String(value) => {
+                Node::String(value) => {
                     let result = convert_integer(value);
-                    Primitive::Integer(result as isize)
+                    Node::Integer(result as isize)
                 }
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
             },
             // int to string
             "$" => match operand {
-                Primitive::Integer(value) => {
+                Node::Integer(value) => {
                     let result = deconvert_integer(value as usize);
                     let result = convert_string(result);
-                    Primitive::String(result)
+                    Node::String(result)
                 }
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
             },
@@ -56,100 +59,71 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_binary_operator(
-        &self,
-        operator: &str,
-        left: Primitive,
-        right: Primitive,
-    ) -> Primitive {
+    fn evaluate_binary_operator(&self, operator: &str, left: Node, right: Node) -> Node {
         match operator {
             "+" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Integer(left + right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Integer(left + right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "-" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Integer(left - right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Integer(left - right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "*" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Integer(left * right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Integer(left * right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "/" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Integer(left / right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Integer(left / right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "%" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Integer(left % right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Integer(left % right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "<" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Boolean(left < right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left < right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             ">" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Boolean(left > right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left > right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "=" => match (left, right) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    Primitive::Boolean(left == right)
-                }
+                (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left == right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "|" => match (left, right) {
-                (Primitive::Boolean(left), Primitive::Boolean(right)) => {
-                    Primitive::Boolean(left || right)
-                }
+                (Node::Boolean(left), Node::Boolean(right)) => Node::Boolean(left || right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "&" => match (left, right) {
-                (Primitive::Boolean(left), Primitive::Boolean(right)) => {
-                    Primitive::Boolean(left && right)
-                }
+                (Node::Boolean(left), Node::Boolean(right)) => Node::Boolean(left && right),
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "." => match (left, right) {
-                (Primitive::String(left), Primitive::String(right)) => {
+                (Node::String(left), Node::String(right)) => {
                     let result = left + &right;
-                    Primitive::String(result)
+                    Node::String(result)
                 }
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "T" => match (left, right) {
-                (Primitive::String(left), Primitive::Integer(right)) => {
+                (Node::String(left), Node::Integer(right)) => {
                     let result = left.chars().take(right as usize).collect();
-                    Primitive::String(result)
+                    Node::String(result)
                 }
                 _ => panic!("Unsupported operands for binary operator"),
             },
             "D" => match (left, right) {
-                (Primitive::String(left), Primitive::Integer(right)) => {
+                (Node::String(left), Node::Integer(right)) => {
                     let result = left.chars().skip(right as usize).collect();
-                    Primitive::String(result)
+                    Node::String(result)
                 }
                 _ => panic!("Unsupported operands for binary operator"),
             },
             // apply term x to y
             "$" => match (left, right) {
-                // (Primitive::Lambda(left), right) => {
-                //     let result = left.apply(right);
-                //     result
-                // }
                 _ => panic!("Unsupported operands for binary operator"),
             },
             _ => panic!("Unsupported binary operator: {}", operator),
@@ -163,106 +137,76 @@ mod tests {
 
     #[test]
     fn test_evaluate_unary_operator() {
-        let evaluator = Evaluator::new(Node::Primitive(Primitive::Integer(42)));
+        let evaluator = Evaluator::new(Node::Integer(42));
         assert_eq!(
-            evaluator.evaluate_unary_operator("-", Primitive::Integer(42)),
-            Primitive::Integer(-42)
+            evaluator.evaluate_unary_operator("-", Node::Integer(42)),
+            Node::Integer(-42)
         );
         assert_eq!(
-            evaluator.evaluate_unary_operator("!", Primitive::Boolean(true)),
-            Primitive::Boolean(false)
+            evaluator.evaluate_unary_operator("!", Node::Boolean(true)),
+            Node::Boolean(false)
         );
         assert_eq!(
-            evaluator.evaluate_unary_operator("#", Primitive::String("4%34".to_string())),
-            Primitive::Integer(15818151)
+            evaluator.evaluate_unary_operator("#", Node::String("4%34".to_string())),
+            Node::Integer(15818151)
         );
         assert_eq!(
-            evaluator.evaluate_unary_operator("$", Primitive::Integer(15818151)),
-            Primitive::String("test".to_string())
+            evaluator.evaluate_unary_operator("$", Node::Integer(15818151)),
+            Node::String("test".to_string())
         );
     }
 
     #[test]
     fn test_evaluate_binary_operator() {
-        let evaluator = Evaluator::new(Node::Primitive(Primitive::Integer(42)));
+        let evaluator = Evaluator::new(Node::Integer(42));
         let cases = vec![
-            (
-                "+",
-                Primitive::Integer(2),
-                Primitive::Integer(3),
-                Primitive::Integer(5),
-            ),
-            (
-                "-",
-                Primitive::Integer(3),
-                Primitive::Integer(2),
-                Primitive::Integer(1),
-            ),
-            (
-                "*",
-                Primitive::Integer(3),
-                Primitive::Integer(2),
-                Primitive::Integer(6),
-            ),
-            (
-                "/",
-                Primitive::Integer(-7),
-                Primitive::Integer(2),
-                Primitive::Integer(-3),
-            ),
-            (
-                "%",
-                Primitive::Integer(-7),
-                Primitive::Integer(2),
-                Primitive::Integer(-1),
-            ),
+            ("+", Node::Integer(2), Node::Integer(3), Node::Integer(5)),
+            ("-", Node::Integer(3), Node::Integer(2), Node::Integer(1)),
+            ("*", Node::Integer(3), Node::Integer(2), Node::Integer(6)),
+            ("/", Node::Integer(-7), Node::Integer(2), Node::Integer(-3)),
+            ("%", Node::Integer(-7), Node::Integer(2), Node::Integer(-1)),
             (
                 "<",
-                Primitive::Integer(3),
-                Primitive::Integer(2),
-                Primitive::Boolean(false),
+                Node::Integer(3),
+                Node::Integer(2),
+                Node::Boolean(false),
             ),
-            (
-                ">",
-                Primitive::Integer(3),
-                Primitive::Integer(2),
-                Primitive::Boolean(true),
-            ),
+            (">", Node::Integer(3), Node::Integer(2), Node::Boolean(true)),
             (
                 "=",
-                Primitive::Integer(3),
-                Primitive::Integer(2),
-                Primitive::Boolean(false),
+                Node::Integer(3),
+                Node::Integer(2),
+                Node::Boolean(false),
             ),
             (
                 "|",
-                Primitive::Boolean(true),
-                Primitive::Boolean(false),
-                Primitive::Boolean(true),
+                Node::Boolean(true),
+                Node::Boolean(false),
+                Node::Boolean(true),
             ),
             (
                 "&",
-                Primitive::Boolean(true),
-                Primitive::Boolean(false),
-                Primitive::Boolean(false),
+                Node::Boolean(true),
+                Node::Boolean(false),
+                Node::Boolean(false),
             ),
             (
                 ".",
-                Primitive::String("te".to_string()),
-                Primitive::String("st".to_string()),
-                Primitive::String("test".to_string()),
+                Node::String("te".to_string()),
+                Node::String("st".to_string()),
+                Node::String("test".to_string()),
             ),
             (
                 "T",
-                Primitive::String("test".to_string()),
-                Primitive::Integer(3),
-                Primitive::String("tes".to_string()),
+                Node::String("test".to_string()),
+                Node::Integer(3),
+                Node::String("tes".to_string()),
             ),
             (
                 "D",
-                Primitive::String("test".to_string()),
-                Primitive::Integer(3),
-                Primitive::String("t".to_string()),
+                Node::String("test".to_string()),
+                Node::Integer(3),
+                Node::String("t".to_string()),
             ),
         ];
         for (operator, left, right, expected) in cases {
@@ -277,8 +221,8 @@ mod tests {
     fn test_evaluate() {
         let evaluator = Evaluator::new(Node::UnaryOperator(
             "-".to_string(),
-            Box::new(Node::Primitive(Primitive::Integer(42))),
+            Box::new(Node::Integer(42)),
         ));
-        assert_eq!(evaluator.evaluate(), Primitive::Integer(-42));
+        assert_eq!(evaluator.evaluate(), Node::Integer(-42));
     }
 }
