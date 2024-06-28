@@ -10,6 +10,7 @@ pub enum Token {
     String(String),
     UnaryOperator(String),
     BinaryOperator(String),
+    If,
     Unknown(String),
 }
 
@@ -21,6 +22,7 @@ impl Token {
             Token::String(value) => value.to_string(),
             Token::UnaryOperator(value) => value.to_string(),
             Token::BinaryOperator(value) => value.to_string(),
+            Token::If => "If".to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -46,6 +48,7 @@ impl Tokenizer {
                 'S' => tokens.push(self.tokenize_string()),
                 'U' => tokens.push(self.tokenize_unary_operator()),
                 'B' => tokens.push(self.tokenize_binary_operator()),
+                '?' => tokens.push(Token::If),
                 ' ' => {
                     self.input.next();
                 }
