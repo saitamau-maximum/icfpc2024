@@ -6,6 +6,7 @@ pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Integer(String),
+    Boolean(bool),
     Unknown(String),
 }
 
@@ -13,6 +14,7 @@ impl Token {
     pub fn to_string(&self) -> String {
         match self {
             Token::Integer(value) => value.to_string(),
+            Token::Boolean(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -34,6 +36,7 @@ impl Tokenizer {
         while let Some(&c) = self.input.peek() {
             match c {
                 'I' => tokens.push(self.tokenize_integer()),
+                'T' | 'F' => tokens.push(self.tokenize_boolean()),
                 ' ' => {
                     self.input.next();
                 }
@@ -61,6 +64,23 @@ impl Tokenizer {
         Token::Integer(value)
     }
 
+    fn tokenize_boolean(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'T' | 'F' => {
+                    value.push(c);
+                    self.input.next();
+                }
+                ' ' => break,
+                _ => {
+                    self.input.next();
+                }
+            }
+        }
+        Token::Boolean(value == "T")
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -81,12 +101,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tokenize() {
+    fn test_tokenize_integer() {
         let input = "I/6 + I5";
         let expected = vec![
             Token::Integer("/6".to_string()),
             Token::Unknown("+".to_string()),
             Token::Integer("5".to_string()),
+        ];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_boolean() {
+        let input = "T F T F";
+        let expected = vec![
+            Token::Boolean(true),
+            Token::Boolean(false),
+            Token::Boolean(true),
+            Token::Boolean(false),
         ];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
