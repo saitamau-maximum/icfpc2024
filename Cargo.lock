@@ -374,6 +374,7 @@ name = "icfpc2024"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "proconio",
  "reqwest",
  "serde",
  "serde_json",
@@ -643,6 +644,12 @@ checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "proconio"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eb404616795079e2390e7115acf0ada24e9332e8476de2aada7bacb9992dc9e"
 
 [[package]]
 name = "quote"
