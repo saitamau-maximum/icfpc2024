@@ -8,6 +8,7 @@ pub enum Token {
     Integer(String),
     Boolean(bool),
     String(String),
+    UnaryOperator(String),
     Unknown(String),
 }
 
@@ -17,6 +18,7 @@ impl Token {
             Token::Integer(value) => value.to_string(),
             Token::Boolean(value) => value.to_string(),
             Token::String(value) => value.to_string(),
+            Token::UnaryOperator(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -40,6 +42,7 @@ impl Tokenizer {
                 'I' => tokens.push(self.tokenize_integer()),
                 'T' | 'F' => tokens.push(self.tokenize_boolean()),
                 'S' => tokens.push(self.tokenize_string()),
+                'U' => tokens.push(self.tokenize_unary_operator()),
                 ' ' => {
                     self.input.next();
                 }
@@ -102,6 +105,24 @@ impl Tokenizer {
         Token::String(value)
     }
 
+    fn tokenize_unary_operator(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'U' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::UnaryOperator(value)
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -152,6 +173,20 @@ mod tests {
     fn test_tokenize_string() {
         let input = "SB%,,/}Q/2,$_";
         let expected = vec![Token::String("B%,,/}Q/2,$_".to_string())];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_unary_operator() {
+        let input = "U+ U- U* U/";
+        let expected = vec![
+            Token::UnaryOperator("+".to_string()),
+            Token::UnaryOperator("-".to_string()),
+            Token::UnaryOperator("*".to_string()),
+            Token::UnaryOperator("/".to_string()),
+        ];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
