@@ -7,6 +7,7 @@ pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 pub enum Token {
     Integer(String),
     Boolean(bool),
+    String(String),
     Unknown(String),
 }
 
@@ -15,6 +16,7 @@ impl Token {
         match self {
             Token::Integer(value) => value.to_string(),
             Token::Boolean(value) => value.to_string(),
+            Token::String(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -37,6 +39,7 @@ impl Tokenizer {
             match c {
                 'I' => tokens.push(self.tokenize_integer()),
                 'T' | 'F' => tokens.push(self.tokenize_boolean()),
+                'S' => tokens.push(self.tokenize_string()),
                 ' ' => {
                     self.input.next();
                 }
@@ -81,6 +84,24 @@ impl Tokenizer {
         Token::Boolean(value == "T")
     }
 
+    fn tokenize_string(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'S' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::String(value)
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -122,6 +143,15 @@ mod tests {
             Token::Boolean(true),
             Token::Boolean(false),
         ];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_string() {
+        let input = "SB%,,/}Q/2,$_";
+        let expected = vec![Token::String("B%,,/}Q/2,$_".to_string())];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
