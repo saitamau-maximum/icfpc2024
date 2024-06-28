@@ -14,6 +14,7 @@ pub enum Token {
     BinaryOperator(String),
     If,
     Lambda(String),
+    Variable(usize),
     Unknown(String),
 }
 
@@ -27,6 +28,7 @@ impl Token {
             Token::BinaryOperator(value) => value.to_string(),
             Token::If => "If".to_string(),
             Token::Lambda(value) => value.to_string(),
+            Token::Variable(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -54,6 +56,7 @@ impl Tokenizer {
                 'B' => tokens.push(self.tokenize_binary_operator()),
                 '?' => tokens.push(self.tokenize_if()),
                 'L' => tokens.push(self.tokenize_lambda()),
+                'v' => tokens.push(self.tokenize_variable()),
                 ' ' => {
                     self.input.next();
                 }
@@ -175,6 +178,24 @@ impl Tokenizer {
         Token::Lambda(value)
     }
 
+    fn tokenize_variable(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'v' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::Variable(convert_integer(value))
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -271,6 +292,15 @@ mod tests {
     fn test_tokenize_lambda() {
         let input = "L#";
         let expected = vec![Token::Lambda("#".to_string())];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_variable() {
+        let input = "v#";
+        let expected = vec![Token::Variable(2)];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
