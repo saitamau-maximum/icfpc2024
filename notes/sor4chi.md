@@ -34,3 +34,9 @@ ou scored some points for using the echo service!
 `get lambdaman`を送信。
 
 [これが帰ってきた](./lambdaman/intro.md)
+
+### [2:42] `get speaceship`する
+
+`get spaceship`を送信。
+
+[これが帰ってきた](./spaceship/intro.md)
