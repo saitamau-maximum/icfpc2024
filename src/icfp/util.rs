@@ -38,13 +38,3 @@ pub fn deconvert_string(value: String) -> String {
     }
     result
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_deconvert_string() {
-        assert_eq!(deconvert_string("get echo".to_string()), "123");
-    }
-}

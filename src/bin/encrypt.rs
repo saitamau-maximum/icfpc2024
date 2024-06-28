@@ -1,4 +1,4 @@
-use icfpc2024::{tokenizer::Tokenizer, util::deconvert_string};
+use icfpc2024::icfp::{tokenizer::Tokenizer, util::deconvert_string};
 use std::io::stdin;
 
 fn main() {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::parser::Node;
-use crate::util::{convert_integer, convert_string, deconvert_integer};
+use super::parser::Node;
+use super::util::{convert_integer, convert_string, deconvert_integer};
 
 pub struct Evaluator {
     node: Node,
@@ -186,7 +186,7 @@ impl Evaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parser::Parser, tokenizer::Tokenizer};
+    use crate::icfp::{parser::Parser, tokenizer::Tokenizer};
 
     use super::*;
 

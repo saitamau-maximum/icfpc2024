@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use icfpc2024::{
+use icfpc2024::icfp::{
     evaluator::Evaluator,
     parser::{Node, Parser},
     tokenizer::Tokenizer,

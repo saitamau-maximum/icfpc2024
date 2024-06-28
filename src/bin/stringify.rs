@@ -1,4 +1,4 @@
-use icfpc2024::tokenizer::Tokenizer;
+use icfpc2024::icfp::tokenizer::Tokenizer;
 use std::io::stdin;
 
 fn main() {

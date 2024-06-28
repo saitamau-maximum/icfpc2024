@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use crate::util::{convert_integer, convert_string};
+use super::util::{convert_integer, convert_string};
 
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
