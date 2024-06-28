@@ -22,20 +22,25 @@ impl Evaluator {
             Node::String(_) => node.clone(),
             Node::Boolean(_) => node.clone(),
             Node::Variable(_) => node.clone(),
-            Node::Lambda(arity, body) => {
-                let result = self.evaluate_node(body);
-                Node::Lambda(*arity, Box::new(result))
-            }
+            Node::Lambda(arity, body) => Node::Lambda(*arity, Box::new(self.evaluate_node(body))),
             Node::UnaryOperator(operator, operand) => {
-                let result = self.evaluate_node(operand);
-                self.evaluate_unary_operator(operator, result)
+                self.evaluate_unary_operator(operator, *operand.clone())
             }
             Node::BinaryOperator(_, _, _) => self.evaluate_binary_operator(node.clone()),
+            Node::If(condition, then_branch, else_branch) => {
+                let condition = self.evaluate_node(condition);
+                match condition {
+                    Node::Boolean(true) => self.evaluate_node(then_branch),
+                    Node::Boolean(false) => self.evaluate_node(else_branch),
+                    _ => panic!("Unsupported condition: {:?}", condition),
+                }
+            }
             _ => panic!("Unsupported node: {:?}", node),
         }
     }
 
     fn evaluate_unary_operator(&self, operator: &str, operand: Node) -> Node {
+        let operand = self.evaluate_node(&operand);
         match operator {
             "-" => match operand {
                 Node::Integer(value) => Node::Integer(-value),
