@@ -1,13 +1,3 @@
 {
-  "files.associations": {
-    ".fantomasignore": "ignore",
-    "*.html": "html",
-    "*.blade.php": "html",
-    "*.tsx": "typescriptreact",
-    "*.bnf": "ebnf",
-    "*.txt": "plaintext",
-    "*.ts": "typescript",
-    "あ": "plaintext",
-    "ostream": "cpp"
-  }
+  "rust-analyzer.linkedProjects": ["visualizer/wasm/Cargo.toml"]
 }

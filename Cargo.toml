@@ -9,5 +9,6 @@ rand = "0.8.5"
 reqwest = { version = "0.12.5", features = ["json"] }
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.118"
+svg = "0.17.0"
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-macros = "2.3.0"
