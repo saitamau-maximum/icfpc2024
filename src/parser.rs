@@ -5,14 +5,16 @@ pub enum Primitive {
     Integer(isize),
     String(String),
     Boolean(bool),
+    Variable(usize),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Node {
     Primitive(Primitive),
-    UnaryOperator((String, Box<Node>)),
-    BinaryOperator((String, Box<Node>, Box<Node>)),
+    UnaryOperator(String, Box<Node>),
+    BinaryOperator(String, Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Box<Node>),
+    Lambda(Box<Node>),
 }
 
 pub struct Parser<'a> {
@@ -46,9 +48,14 @@ impl<'a> Parser<'a> {
                 self.position += 1;
                 Node::Primitive(Primitive::Boolean(value))
             }
+            Token::Variable(value) => {
+                self.position += 1;
+                Node::Primitive(Primitive::Variable(value))
+            }
             Token::UnaryOperator(_) => self.parse_unary(),
             Token::BinaryOperator(_) => self.parse_binary(),
             Token::If => self.parse_if(),
+            Token::Lambda(_) => self.parse_lambda(),
             _ => panic!("Expected integer or unary operator"),
         }
     }
@@ -60,7 +67,7 @@ impl<'a> Parser<'a> {
         };
         self.position += 1;
         let operand = Box::new(self.parse_node());
-        Node::UnaryOperator((operator, operand))
+        Node::UnaryOperator(operator, operand)
     }
 
     fn parse_binary(&mut self) -> Node {
@@ -71,7 +78,7 @@ impl<'a> Parser<'a> {
         self.position += 1;
         let left = Box::new(self.parse_node());
         let right = Box::new(self.parse_node());
-        Node::BinaryOperator((operator, left, right))
+        Node::BinaryOperator(operator, left, right)
     }
 
     fn parse_if(&mut self) -> Node {
@@ -80,6 +87,12 @@ impl<'a> Parser<'a> {
         let then_branch = Box::new(self.parse_node());
         let else_branch = Box::new(self.parse_node());
         Node::If(condition, then_branch, else_branch)
+    }
+
+    fn parse_lambda(&mut self) -> Node {
+        self.position += 1;
+        let node = Box::new(self.parse_node());
+        Node::Lambda(node)
     }
 }
 
@@ -94,10 +107,10 @@ mod tests {
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator((
+            Node::UnaryOperator(
                 "-".to_string(),
                 Box::new(Node::Primitive(Primitive::Integer(3)))
-            ))
+            )
         );
     }
 
@@ -112,13 +125,13 @@ mod tests {
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator((
+            Node::UnaryOperator(
                 "-".to_string(),
-                Box::new(Node::UnaryOperator((
+                Box::new(Node::UnaryOperator(
                     "-".to_string(),
                     Box::new(Node::Primitive(Primitive::Integer(3)))
-                )))
-            ))
+                ))
+            )
         );
     }
 
@@ -133,11 +146,11 @@ mod tests {
         let node = parser.parse_binary();
         assert_eq!(
             node,
-            Node::BinaryOperator((
+            Node::BinaryOperator(
                 "+".to_string(),
                 Box::new(Node::Primitive(Primitive::Integer(3))),
                 Box::new(Node::Primitive(Primitive::Integer(4)))
-            ))
+            )
         );
     }
 
@@ -154,15 +167,15 @@ mod tests {
         let node = parser.parse_binary();
         assert_eq!(
             node,
-            Node::BinaryOperator((
+            Node::BinaryOperator(
                 "+".to_string(),
                 Box::new(Node::Primitive(Primitive::Integer(3))),
-                Box::new(Node::BinaryOperator((
+                Box::new(Node::BinaryOperator(
                     "+".to_string(),
                     Box::new(Node::Primitive(Primitive::Integer(4))),
                     Box::new(Node::Primitive(Primitive::Integer(5)))
-                )))
-            ))
+                ))
+            )
         );
     }
 
@@ -181,13 +194,65 @@ mod tests {
         assert_eq!(
             node,
             Node::If(
-                Box::new(Node::BinaryOperator((
+                Box::new(Node::BinaryOperator(
                     ">".to_string(),
                     Box::new(Node::Primitive(Primitive::Integer(2))),
                     Box::new(Node::Primitive(Primitive::Integer(3)))
-                ))),
+                )),
                 Box::new(Node::Primitive(Primitive::String("yes".to_string()))),
                 Box::new(Node::Primitive(Primitive::String("no".to_string())))
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_lambda() {
+        let tokens = vec![
+            Token::Lambda(1),
+            Token::BinaryOperator("+".to_string()),
+            Token::Integer(1),
+            Token::Integer(2),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::Lambda(Box::new(Node::BinaryOperator(
+                "+".to_string(),
+                Box::new(Node::Primitive(Primitive::Integer(1))),
+                Box::new(Node::Primitive(Primitive::Integer(2)))
+            )))
+        );
+
+        let tokens = vec![
+            Token::BinaryOperator("$".to_string()),
+            Token::BinaryOperator("$".to_string()),
+            Token::Lambda(2),
+            Token::Lambda(3),
+            Token::Variable(2),
+            Token::BinaryOperator(".".to_string()),
+            Token::String("Hello".to_string()),
+            Token::String(" World!".to_string()),
+            Token::Integer(42),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::BinaryOperator(
+                "$".to_string(),
+                Box::new(Node::BinaryOperator(
+                    "$".to_string(),
+                    Box::new(Node::Lambda(Box::new(Node::Lambda(Box::new(
+                        Node::Primitive(Primitive::Variable(2))
+                    ))))),
+                    Box::new(Node::BinaryOperator(
+                        ".".to_string(),
+                        Box::new(Node::Primitive(Primitive::String("Hello".to_string()))),
+                        Box::new(Node::Primitive(Primitive::String(" World!".to_string())))
+                    ))
+                )),
+                Box::new(Node::Primitive(Primitive::Integer(42)))
             )
         );
     }

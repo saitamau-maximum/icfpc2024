@@ -17,7 +17,7 @@ impl Evaluator {
     fn evaluate_node(&self, node: &Node) -> Primitive {
         match node {
             Node::Primitive(primitive) => primitive.clone(),
-            Node::UnaryOperator((operator, operand)) => {
+            Node::UnaryOperator(operator, operand) => {
                 let result = self.evaluate_node(operand);
                 self.evaluate_unary_operator(operator, result)
             }
@@ -146,6 +146,10 @@ impl Evaluator {
             },
             // apply term x to y
             "$" => match (left, right) {
+                // (Primitive::Lambda(left), right) => {
+                //     let result = left.apply(right);
+                //     result
+                // }
                 _ => panic!("Unsupported operands for binary operator"),
             },
             _ => panic!("Unsupported binary operator: {}", operator),
@@ -271,10 +275,10 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        let evaluator = Evaluator::new(Node::UnaryOperator((
+        let evaluator = Evaluator::new(Node::UnaryOperator(
             "-".to_string(),
             Box::new(Node::Primitive(Primitive::Integer(42))),
-        )));
+        ));
         assert_eq!(evaluator.evaluate(), Primitive::Integer(-42));
     }
 }
