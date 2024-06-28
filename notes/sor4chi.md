@@ -72,3 +72,8 @@ ou scored some points for using the echo service!
 
 language_testの出力が単純にエラーを教えてくれていることにやっと気がついた。
 修正したらフラグが出てきたのでサブミットして終わり、ごめんなさい。
+
+### [8:12] 2-OPTでspaceship1を解く
+
+2-OPT焼きなまし+頂点間の操作をビームサーチでspaceship1を解いた。結構悪いけどまあ解けてはいるので順位は結構上がった。
+ついでにVisualizerも作った。この調子でvisualizerほかの問題にも作っていこう。
