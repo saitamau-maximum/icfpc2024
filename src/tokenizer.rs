@@ -13,7 +13,7 @@ pub enum Token {
     UnaryOperator(String),
     BinaryOperator(String),
     If,
-    Lambda(String),
+    Lambda(usize),
     Variable(usize),
     Unknown(String),
 }
@@ -175,7 +175,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::Lambda(value)
+        Token::Lambda(convert_integer(value))
     }
 
     fn tokenize_variable(&mut self) -> Token {
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn test_tokenize_lambda() {
         let input = "L#";
-        let expected = vec![Token::Lambda("#".to_string())];
+        let expected = vec![Token::Lambda(2)];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);

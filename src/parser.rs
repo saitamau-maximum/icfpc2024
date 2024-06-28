@@ -1,17 +1,15 @@
 use crate::tokenizer::Token;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Primitive {
+pub enum Node {
     Integer(isize),
     String(String),
     Boolean(bool),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Node {
-    Primitive(Primitive),
-    UnaryOperator((String, Box<Node>)),
-    BinaryOperator((String, Box<Node>, Box<Node>)),
+    Variable(usize),
+    UnaryOperator(String, Box<Node>),
+    BinaryOperator(String, Box<Node>, Box<Node>),
+    If(Box<Node>, Box<Node>, Box<Node>),
+    Lambda(usize, Box<Node>),
 }
 
 pub struct Parser<'a> {
@@ -35,18 +33,24 @@ impl<'a> Parser<'a> {
         match self.tokens[self.position] {
             Token::Integer(value) => {
                 self.position += 1;
-                Node::Primitive(Primitive::Integer(value as isize))
+                Node::Integer(value as isize)
             }
             Token::String(ref value) => {
                 self.position += 1;
-                Node::Primitive(Primitive::String(value.clone()))
+                Node::String(value.clone())
             }
             Token::Boolean(value) => {
                 self.position += 1;
-                Node::Primitive(Primitive::Boolean(value))
+                Node::Boolean(value)
+            }
+            Token::Variable(value) => {
+                self.position += 1;
+                Node::Variable(value)
             }
             Token::UnaryOperator(_) => self.parse_unary(),
             Token::BinaryOperator(_) => self.parse_binary(),
+            Token::If => self.parse_if(),
+            Token::Lambda(_) => self.parse_lambda(),
             _ => panic!("Expected integer or unary operator"),
         }
     }
@@ -58,7 +62,7 @@ impl<'a> Parser<'a> {
         };
         self.position += 1;
         let operand = Box::new(self.parse_node());
-        Node::UnaryOperator((operator, operand))
+        Node::UnaryOperator(operator, operand)
     }
 
     fn parse_binary(&mut self) -> Node {
@@ -69,7 +73,25 @@ impl<'a> Parser<'a> {
         self.position += 1;
         let left = Box::new(self.parse_node());
         let right = Box::new(self.parse_node());
-        Node::BinaryOperator((operator, left, right))
+        Node::BinaryOperator(operator, left, right)
+    }
+
+    fn parse_if(&mut self) -> Node {
+        self.position += 1;
+        let condition = Box::new(self.parse_node());
+        let then_branch = Box::new(self.parse_node());
+        let else_branch = Box::new(self.parse_node());
+        Node::If(condition, then_branch, else_branch)
+    }
+
+    fn parse_lambda(&mut self) -> Node {
+        let arity = match self.tokens[self.position] {
+            Token::Lambda(arity) => arity,
+            _ => panic!("Expected lambda"),
+        };
+        self.position += 1;
+        let body = Box::new(self.parse_node());
+        Node::Lambda(arity, body)
     }
 }
 
@@ -84,10 +106,7 @@ mod tests {
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator((
-                "-".to_string(),
-                Box::new(Node::Primitive(Primitive::Integer(3)))
-            ))
+            Node::UnaryOperator("-".to_string(), Box::new(Node::Integer(3)))
         );
     }
 
@@ -102,13 +121,13 @@ mod tests {
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator((
+            Node::UnaryOperator(
                 "-".to_string(),
-                Box::new(Node::UnaryOperator((
+                Box::new(Node::UnaryOperator(
                     "-".to_string(),
-                    Box::new(Node::Primitive(Primitive::Integer(3)))
-                )))
-            ))
+                    Box::new(Node::Integer(3))
+                ))
+            )
         );
     }
 
@@ -123,11 +142,11 @@ mod tests {
         let node = parser.parse_binary();
         assert_eq!(
             node,
-            Node::BinaryOperator((
+            Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Primitive(Primitive::Integer(3))),
-                Box::new(Node::Primitive(Primitive::Integer(4)))
-            ))
+                Box::new(Node::Integer(3)),
+                Box::new(Node::Integer(4))
+            )
         );
     }
 
@@ -144,15 +163,97 @@ mod tests {
         let node = parser.parse_binary();
         assert_eq!(
             node,
-            Node::BinaryOperator((
+            Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Primitive(Primitive::Integer(3))),
-                Box::new(Node::BinaryOperator((
+                Box::new(Node::Integer(3)),
+                Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Primitive(Primitive::Integer(4))),
-                    Box::new(Node::Primitive(Primitive::Integer(5)))
-                )))
-            ))
+                    Box::new(Node::Integer(4)),
+                    Box::new(Node::Integer(5))
+                ))
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_if() {
+        let tokens = vec![
+            Token::If,
+            Token::BinaryOperator(">".to_string()),
+            Token::Integer(2),
+            Token::Integer(3),
+            Token::String("yes".to_string()),
+            Token::String("no".to_string()),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::If(
+                Box::new(Node::BinaryOperator(
+                    ">".to_string(),
+                    Box::new(Node::Integer(2)),
+                    Box::new(Node::Integer(3))
+                )),
+                Box::new(Node::String("yes".to_string())),
+                Box::new(Node::String("no".to_string()))
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_lambda() {
+        let tokens = vec![
+            Token::Lambda(1),
+            Token::BinaryOperator("+".to_string()),
+            Token::Integer(1),
+            Token::Integer(2),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::Lambda(
+                1,
+                Box::new(Node::BinaryOperator(
+                    "+".to_string(),
+                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Integer(2))
+                ))
+            )
+        );
+
+        let tokens = vec![
+            Token::BinaryOperator("$".to_string()),
+            Token::BinaryOperator("$".to_string()),
+            Token::Lambda(2),
+            Token::Lambda(3),
+            Token::Variable(2),
+            Token::BinaryOperator(".".to_string()),
+            Token::String("Hello".to_string()),
+            Token::String(" World!".to_string()),
+            Token::Integer(42),
+        ];
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        assert_eq!(
+            node,
+            Node::BinaryOperator(
+                "$".to_string(),
+                Box::new(Node::BinaryOperator(
+                    "$".to_string(),
+                    Box::new(Node::Lambda(
+                        2,
+                        Box::new(Node::Lambda(3, Box::new(Node::Variable(2))))
+                    )),
+                    Box::new(Node::BinaryOperator(
+                        ".".to_string(),
+                        Box::new(Node::String("Hello".to_string())),
+                        Box::new(Node::String(" World!".to_string()))
+                    ))
+                )),
+                Box::new(Node::Integer(42))
+            )
         );
     }
 }
