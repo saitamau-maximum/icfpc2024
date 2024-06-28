@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::parser::Node;
-use super::util::{convert_integer, convert_string, deconvert_integer};
+use super::util::{convert_integer, convert_string, deconvert_integer, deconvert_string};
 
 pub struct Evaluator {
     node: Node,
@@ -53,7 +53,8 @@ impl Evaluator {
             // string to int
             "#" => match operand {
                 Node::String(value) => {
-                    let result = convert_integer(value);
+                    let result = deconvert_string(value);
+                    let result = convert_integer(result);
                     Node::Integer(result as isize)
                 }
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
