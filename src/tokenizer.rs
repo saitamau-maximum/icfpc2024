@@ -5,7 +5,7 @@ pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Integer(String),
+    Integer(usize),
     Boolean(bool),
     String(String),
     UnaryOperator(String),
@@ -27,6 +27,9 @@ impl Token {
         }
     }
 }
+
+const INTEGER_ASCII: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+const STRING_ASCII: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
 
 struct Tokenizer {
     input: PeekableIter<char>,
@@ -58,6 +61,15 @@ impl Tokenizer {
         tokens
     }
 
+    fn parse_integer(value: String) -> usize {
+        let mut result = 0;
+        for c in value.chars() {
+            let index = INTEGER_ASCII.find(c).unwrap();
+            result = result * INTEGER_ASCII.len() + index;
+        }
+        result
+    }
+
     fn tokenize_integer(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -73,7 +85,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::Integer(value)
+        Token::Integer(Self::parse_integer(value))
     }
 
     fn tokenize_boolean(&mut self) -> Token {
@@ -93,6 +105,15 @@ impl Tokenizer {
         Token::Boolean(value == "T")
     }
 
+    fn parse_string(value: String) -> String {
+        let mut result = String::new();
+        for c in value.chars() {
+            let index = INTEGER_ASCII.find(c).unwrap();
+            result.push(STRING_ASCII.chars().nth(index).unwrap());
+        }
+        result
+    }
+
     fn tokenize_string(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -108,7 +129,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::String(value)
+        Token::String(Self::parse_string(value))
     }
 
     fn tokenize_unary_operator(&mut self) -> Token {
@@ -170,9 +191,9 @@ mod tests {
     fn test_tokenize_integer() {
         let input = "I/6 + I5";
         let expected = vec![
-            Token::Integer("/6".to_string()),
+            Token::Integer(1337),
             Token::Unknown("+".to_string()),
-            Token::Integer("5".to_string()),
+            Token::Integer(20),
         ];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
@@ -196,7 +217,7 @@ mod tests {
     #[test]
     fn test_tokenize_string() {
         let input = "SB%,,/}Q/2,$_";
-        let expected = vec![Token::String("B%,,/}Q/2,$_".to_string())];
+        let expected = vec![Token::String("Hello World!".to_string())];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
