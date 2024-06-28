@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
+use crate::util::{convert_integer, convert_string};
+
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -11,6 +13,8 @@ pub enum Token {
     UnaryOperator(String),
     BinaryOperator(String),
     If,
+    Lambda(String),
+    Variable(usize),
     Unknown(String),
 }
 
@@ -23,13 +27,12 @@ impl Token {
             Token::UnaryOperator(value) => value.to_string(),
             Token::BinaryOperator(value) => value.to_string(),
             Token::If => "If".to_string(),
+            Token::Lambda(value) => value.to_string(),
+            Token::Variable(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
 }
-
-const INTEGER_ASCII: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-const STRING_ASCII: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
 
 pub struct Tokenizer {
     input: PeekableIter<char>,
@@ -51,7 +54,9 @@ impl Tokenizer {
                 'S' => tokens.push(self.tokenize_string()),
                 'U' => tokens.push(self.tokenize_unary_operator()),
                 'B' => tokens.push(self.tokenize_binary_operator()),
-                '?' => tokens.push(Token::If),
+                '?' => tokens.push(self.tokenize_if()),
+                'L' => tokens.push(self.tokenize_lambda()),
+                'v' => tokens.push(self.tokenize_variable()),
                 ' ' => {
                     self.input.next();
                 }
@@ -59,15 +64,6 @@ impl Tokenizer {
             }
         }
         tokens
-    }
-
-    fn parse_integer(value: String) -> usize {
-        let mut result = 0;
-        for c in value.chars() {
-            let index = INTEGER_ASCII.find(c).unwrap();
-            result = result * INTEGER_ASCII.len() + index;
-        }
-        result
     }
 
     fn tokenize_integer(&mut self) -> Token {
@@ -85,7 +81,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::Integer(Self::parse_integer(value))
+        Token::Integer(convert_integer(value))
     }
 
     fn tokenize_boolean(&mut self) -> Token {
@@ -105,15 +101,6 @@ impl Tokenizer {
         Token::Boolean(value == "T")
     }
 
-    fn parse_string(value: String) -> String {
-        let mut result = String::new();
-        for c in value.chars() {
-            let index = INTEGER_ASCII.find(c).unwrap();
-            result.push(STRING_ASCII.chars().nth(index).unwrap());
-        }
-        result
-    }
-
     fn tokenize_string(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -129,7 +116,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::String(Self::parse_string(value))
+        Token::String(convert_string(value))
     }
 
     fn tokenize_unary_operator(&mut self) -> Token {
@@ -166,6 +153,47 @@ impl Tokenizer {
             }
         }
         Token::BinaryOperator(value)
+    }
+
+    fn tokenize_if(&mut self) -> Token {
+        self.input.next();
+        Token::If
+    }
+
+    fn tokenize_lambda(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'L' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::Lambda(value)
+    }
+
+    fn tokenize_variable(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'v' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::Variable(convert_integer(value))
     }
 
     fn tokenize_unknown(&mut self) -> Token {
@@ -246,6 +274,33 @@ mod tests {
             Token::BinaryOperator("*".to_string()),
             Token::BinaryOperator("/".to_string()),
         ];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_if() {
+        let input = "?";
+        let expected = vec![Token::If];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_lambda() {
+        let input = "L#";
+        let expected = vec![Token::Lambda("#".to_string())];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_variable() {
+        let input = "v#";
+        let expected = vec![Token::Variable(2)];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
