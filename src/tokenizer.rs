@@ -13,6 +13,7 @@ pub enum Token {
     UnaryOperator(String),
     BinaryOperator(String),
     If,
+    Lambda(String),
     Unknown(String),
 }
 
@@ -25,6 +26,7 @@ impl Token {
             Token::UnaryOperator(value) => value.to_string(),
             Token::BinaryOperator(value) => value.to_string(),
             Token::If => "If".to_string(),
+            Token::Lambda(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -51,6 +53,7 @@ impl Tokenizer {
                 'U' => tokens.push(self.tokenize_unary_operator()),
                 'B' => tokens.push(self.tokenize_binary_operator()),
                 '?' => tokens.push(self.tokenize_if()),
+                'L' => tokens.push(self.tokenize_lambda()),
                 ' ' => {
                     self.input.next();
                 }
@@ -154,6 +157,24 @@ impl Tokenizer {
         Token::If
     }
 
+    fn tokenize_lambda(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'L' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::Lambda(value)
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -232,6 +253,24 @@ mod tests {
             Token::BinaryOperator("*".to_string()),
             Token::BinaryOperator("/".to_string()),
         ];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_if() {
+        let input = "?";
+        let expected = vec![Token::If];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_lambda() {
+        let input = "L#";
+        let expected = vec![Token::Lambda("#".to_string())];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
         assert_eq!(result, expected);
