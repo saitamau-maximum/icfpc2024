@@ -50,7 +50,7 @@ impl Tokenizer {
                 'S' => tokens.push(self.tokenize_string()),
                 'U' => tokens.push(self.tokenize_unary_operator()),
                 'B' => tokens.push(self.tokenize_binary_operator()),
-                '?' => tokens.push(Token::If),
+                '?' => tokens.push(self.tokenize_if()),
                 ' ' => {
                     self.input.next();
                 }
@@ -147,6 +147,11 @@ impl Tokenizer {
             }
         }
         Token::BinaryOperator(value)
+    }
+
+    fn tokenize_if(&mut self) -> Token {
+        self.input.next();
+        Token::If
     }
 
     fn tokenize_unknown(&mut self) -> Token {
