@@ -1,9 +1,15 @@
 use crate::tokenizer::Token;
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Primitive {
+    Integer(isize),
+    String(String),
+    Boolean(bool),
+}
+
 #[derive(Debug, PartialEq)]
-enum Node {
-    IntegerLiteral(usize),
-    StringLiteral(String),
+pub enum Node {
+    Primitive(Primitive),
     UnaryOperator((String, Box<Node>)),
     BinaryOperator((String, Box<Node>, Box<Node>)),
 }
@@ -29,11 +35,15 @@ impl<'a> Parser<'a> {
         match self.tokens[self.position] {
             Token::Integer(value) => {
                 self.position += 1;
-                Node::IntegerLiteral(value)
+                Node::Primitive(Primitive::Integer(value as isize))
             }
             Token::String(ref value) => {
                 self.position += 1;
-                Node::StringLiteral(value.clone())
+                Node::Primitive(Primitive::String(value.clone()))
+            }
+            Token::Boolean(value) => {
+                self.position += 1;
+                Node::Primitive(Primitive::Boolean(value))
             }
             Token::UnaryOperator(_) => self.parse_unary(),
             Token::BinaryOperator(_) => self.parse_binary(),
@@ -74,7 +84,10 @@ mod tests {
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator(("-".to_string(), Box::new(Node::IntegerLiteral(3))))
+            Node::UnaryOperator((
+                "-".to_string(),
+                Box::new(Node::Primitive(Primitive::Integer(3)))
+            ))
         );
     }
 
@@ -93,7 +106,7 @@ mod tests {
                 "-".to_string(),
                 Box::new(Node::UnaryOperator((
                     "-".to_string(),
-                    Box::new(Node::IntegerLiteral(3))
+                    Box::new(Node::Primitive(Primitive::Integer(3)))
                 )))
             ))
         );
@@ -112,8 +125,8 @@ mod tests {
             node,
             Node::BinaryOperator((
                 "+".to_string(),
-                Box::new(Node::IntegerLiteral(3)),
-                Box::new(Node::IntegerLiteral(4))
+                Box::new(Node::Primitive(Primitive::Integer(3))),
+                Box::new(Node::Primitive(Primitive::Integer(4)))
             ))
         );
     }
@@ -133,11 +146,11 @@ mod tests {
             node,
             Node::BinaryOperator((
                 "+".to_string(),
-                Box::new(Node::IntegerLiteral(3)),
+                Box::new(Node::Primitive(Primitive::Integer(3))),
                 Box::new(Node::BinaryOperator((
                     "+".to_string(),
-                    Box::new(Node::IntegerLiteral(4)),
-                    Box::new(Node::IntegerLiteral(5))
+                    Box::new(Node::Primitive(Primitive::Integer(4))),
+                    Box::new(Node::Primitive(Primitive::Integer(5)))
                 )))
             ))
         );
