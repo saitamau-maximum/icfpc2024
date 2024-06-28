@@ -51,7 +51,7 @@ ASCII 33 - 126 は順番に `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 - `.`: 文字列連結 (`B. S4% S34` は `4%34` となり、 `test`)
 - `T`: 文字列 `y` の最初 `x` 文字を取り出す (`BT I$ S4%34` は `test` の最初 3 文字、 `tes`)
 - `D`: 文字列 `y` の最初 `x` 文字を取り除く (`BD I$ S4%34` は `test` の最初 3 文字を取り除き、 `t`)
-- `$`: `x` を `y` の引数として呼び出し (ラムダ式)
+- `$`: `x`(`y`) を実行
 
 ## IF
 
@@ -70,10 +70,65 @@ indicator `?` ・ body なし
 
 ## ラムダ式
 
-indicator `L` ・ body は integer と同様に解釈できる、変数の数。
-indicator `v` は変数で、 body は integer と同様。
+indicator `L` ・ body は integer と同様に解釈できる、仮引数の ID。
+indicator `v` は変数で、 body は同上、引数の ID。
 
-いったん飛ばしまーす
+```text
+B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK
+```
+
+は
+
+```text
+B$
+├ B$
+│ ├ L#
+│ │ └ L$
+│ │   └ v#
+│ └ B. SB%,,/ S}Q/2,$_
+└ IK
+```
+
+という構文木ができて、
+
+```text
+B$
+├ B$
+│ ├ L#
+│ │ └ L$
+│ │   └ v#              // v2
+│ └ B. SB%,,/ S}Q/2,$_
+└ IK
+
+↓
+
+B$
+├ B$
+│ ├ L#
+│ │ └ L$ v#              // v3 => v2
+│ └ B. SB%,,/ S}Q/2,$_
+└ IK
+
+↓
+
+B$
+├ B$
+│ ├ L# L$ v#             // v2 => (v3 => v2)
+│ └ B. SB%,,/ S}Q/2,$_   // "Hello" + " World!"
+└ IK
+
+↓
+
+B$
+├ B$ L# L$ v# B. SB%,,/ S}Q/2,$_  // (v2 => (v3 => v2))("Hello" + " World!")
+└ IK
+
+↓
+
+B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK   // ((v2 => (v3 => v2))("Hello" + " World!"))(42)
+```
+
+と解析されるっぽい？
 
 ## 式の評価
 
@@ -86,6 +141,55 @@ B$ L" B+ v" v" B* I$ I#
 B+ B* I$ I# B* I$ I#
 B+ I' B* I$ I#
 B+ I' I'
+I-
+```
+
+```text
+B$
+├ L#
+│ └ B$
+│   ├ L"
+│   │ └ B+ v" v"
+│   └ B* I$ I#
+└ v8
+
+↓
+
+v# に v8 を代入して、トップの B$ とその子 L#, v8 を消す
+
+B$
+├ L"
+│ └ B+ v" v"
+└ B* I$ I#
+
+↓
+
+v" に B* I$ I# を代入して B$ をなくす
+
+B+
+├ B* I$ I#
+└ B* I$ I#
+
+↓
+
+B* I$ I# を評価
+
+B+
+├ I'
+└ B* I$ I#
+
+↓
+
+B* I$ I# を評価
+
+B+
+├ I'
+└ I'
+
+↓
+
+B+ I' I' を評価
+
 I-
 ```
 
