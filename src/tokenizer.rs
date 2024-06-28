@@ -9,6 +9,7 @@ pub enum Token {
     Boolean(bool),
     String(String),
     UnaryOperator(String),
+    BinaryOperator(String),
     Unknown(String),
 }
 
@@ -19,6 +20,7 @@ impl Token {
             Token::Boolean(value) => value.to_string(),
             Token::String(value) => value.to_string(),
             Token::UnaryOperator(value) => value.to_string(),
+            Token::BinaryOperator(value) => value.to_string(),
             Token::Unknown(value) => value.to_string(),
         }
     }
@@ -43,6 +45,7 @@ impl Tokenizer {
                 'T' | 'F' => tokens.push(self.tokenize_boolean()),
                 'S' => tokens.push(self.tokenize_string()),
                 'U' => tokens.push(self.tokenize_unary_operator()),
+                'B' => tokens.push(self.tokenize_binary_operator()),
                 ' ' => {
                     self.input.next();
                 }
@@ -123,6 +126,24 @@ impl Tokenizer {
         Token::UnaryOperator(value)
     }
 
+    fn tokenize_binary_operator(&mut self) -> Token {
+        let mut value = String::new();
+        while let Some(&c) = self.input.peek() {
+            match c {
+                'B' => {
+                    self.input.next();
+                    continue;
+                }
+                ' ' => break,
+                _ => {
+                    value.push(c);
+                    self.input.next();
+                }
+            }
+        }
+        Token::BinaryOperator(value)
+    }
+
     fn tokenize_unknown(&mut self) -> Token {
         let mut value = String::new();
         while let Some(&c) = self.input.peek() {
@@ -186,6 +207,20 @@ mod tests {
             Token::UnaryOperator("-".to_string()),
             Token::UnaryOperator("*".to_string()),
             Token::UnaryOperator("/".to_string()),
+        ];
+        let mut tokenizer = Tokenizer::new(input);
+        let result = tokenizer.tokenize();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_tokenize_binary_operator() {
+        let input = "B+ B- B* B/";
+        let expected = vec![
+            Token::BinaryOperator("+".to_string()),
+            Token::BinaryOperator("-".to_string()),
+            Token::BinaryOperator("*".to_string()),
+            Token::BinaryOperator("/".to_string()),
         ];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();
