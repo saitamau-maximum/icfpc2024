@@ -55,6 +55,102 @@ impl Evaluator {
             _ => panic!("Unsupported unary operator: {}", operator),
         }
     }
+
+    fn evaluate_binary_operator(
+        &self,
+        operator: &str,
+        left: Primitive,
+        right: Primitive,
+    ) -> Primitive {
+        match operator {
+            "+" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Integer(left + right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "-" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Integer(left - right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "*" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Integer(left * right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "/" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Integer(left / right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "%" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Integer(left % right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "<" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Boolean(left < right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            ">" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Boolean(left > right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "=" => match (left, right) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Primitive::Boolean(left == right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "|" => match (left, right) {
+                (Primitive::Boolean(left), Primitive::Boolean(right)) => {
+                    Primitive::Boolean(left || right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "&" => match (left, right) {
+                (Primitive::Boolean(left), Primitive::Boolean(right)) => {
+                    Primitive::Boolean(left && right)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "." => match (left, right) {
+                (Primitive::String(left), Primitive::String(right)) => {
+                    let result = left + &right;
+                    Primitive::String(result)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "T" => match (left, right) {
+                (Primitive::String(left), Primitive::Integer(right)) => {
+                    let result = left.chars().take(right as usize).collect();
+                    Primitive::String(result)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            "D" => match (left, right) {
+                (Primitive::String(left), Primitive::Integer(right)) => {
+                    let result = left.chars().skip(right as usize).collect();
+                    Primitive::String(result)
+                }
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            // apply term x to y
+            "$" => match (left, right) {
+                _ => panic!("Unsupported operands for binary operator"),
+            },
+            _ => panic!("Unsupported binary operator: {}", operator),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -80,6 +176,97 @@ mod tests {
             evaluator.evaluate_unary_operator("$", Primitive::Integer(15818151)),
             Primitive::String("test".to_string())
         );
+    }
+
+    #[test]
+    fn test_evaluate_binary_operator() {
+        let evaluator = Evaluator::new(Node::Primitive(Primitive::Integer(42)));
+        let cases = vec![
+            (
+                "+",
+                Primitive::Integer(2),
+                Primitive::Integer(3),
+                Primitive::Integer(5),
+            ),
+            (
+                "-",
+                Primitive::Integer(3),
+                Primitive::Integer(2),
+                Primitive::Integer(1),
+            ),
+            (
+                "*",
+                Primitive::Integer(3),
+                Primitive::Integer(2),
+                Primitive::Integer(6),
+            ),
+            (
+                "/",
+                Primitive::Integer(-7),
+                Primitive::Integer(2),
+                Primitive::Integer(-3),
+            ),
+            (
+                "%",
+                Primitive::Integer(-7),
+                Primitive::Integer(2),
+                Primitive::Integer(-1),
+            ),
+            (
+                "<",
+                Primitive::Integer(3),
+                Primitive::Integer(2),
+                Primitive::Boolean(false),
+            ),
+            (
+                ">",
+                Primitive::Integer(3),
+                Primitive::Integer(2),
+                Primitive::Boolean(true),
+            ),
+            (
+                "=",
+                Primitive::Integer(3),
+                Primitive::Integer(2),
+                Primitive::Boolean(false),
+            ),
+            (
+                "|",
+                Primitive::Boolean(true),
+                Primitive::Boolean(false),
+                Primitive::Boolean(true),
+            ),
+            (
+                "&",
+                Primitive::Boolean(true),
+                Primitive::Boolean(false),
+                Primitive::Boolean(false),
+            ),
+            (
+                ".",
+                Primitive::String("te".to_string()),
+                Primitive::String("st".to_string()),
+                Primitive::String("test".to_string()),
+            ),
+            (
+                "T",
+                Primitive::String("test".to_string()),
+                Primitive::Integer(3),
+                Primitive::String("tes".to_string()),
+            ),
+            (
+                "D",
+                Primitive::String("test".to_string()),
+                Primitive::Integer(3),
+                Primitive::String("t".to_string()),
+            ),
+        ];
+        for (operator, left, right, expected) in cases {
+            assert_eq!(
+                evaluator.evaluate_binary_operator(operator, left, right),
+                expected
+            );
+        }
     }
 
     #[test]
