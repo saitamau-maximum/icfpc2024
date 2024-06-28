@@ -29,3 +29,22 @@ pub fn convert_string(value: String) -> String {
     }
     result
 }
+
+pub fn deconvert_string(value: String) -> String {
+    let mut result = String::new();
+    for c in value.chars() {
+        let index = STRING_ASCII.find(c).unwrap();
+        result.push(INTEGER_ASCII.chars().nth(index).unwrap());
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deconvert_string() {
+        assert_eq!(deconvert_string("get echo".to_string()), "123");
+    }
+}
