@@ -3,7 +3,7 @@ use std::vec::IntoIter;
 
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Integer(usize),
     Boolean(bool),
@@ -31,7 +31,7 @@ impl Token {
 const INTEGER_ASCII: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 const STRING_ASCII: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
 
-struct Tokenizer {
+pub struct Tokenizer {
     input: PeekableIter<char>,
 }
 
