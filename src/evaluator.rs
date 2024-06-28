@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::parser::Node;
 use crate::util::{convert_integer, convert_string, deconvert_integer};
 
@@ -20,10 +22,15 @@ impl Evaluator {
             Node::String(_) => node.clone(),
             Node::Boolean(_) => node.clone(),
             Node::Variable(_) => node.clone(),
+            Node::Lambda(arity, body) => {
+                let result = self.evaluate_node(body);
+                Node::Lambda(*arity, Box::new(result))
+            }
             Node::UnaryOperator(operator, operand) => {
                 let result = self.evaluate_node(operand);
                 self.evaluate_unary_operator(operator, result)
             }
+            Node::BinaryOperator(_, _, _) => self.evaluate_binary_operator(node.clone()),
             _ => panic!("Unsupported node: {:?}", node),
         }
     }
@@ -59,80 +66,122 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_binary_operator(&self, operator: &str, left: Node, right: Node) -> Node {
-        match operator {
+    fn evaluate_binary_operator(&self, node: Node) -> Node {
+        let (operator, left, right) = match node {
+            Node::BinaryOperator(ref operator, ref left, ref right) => (operator, left, right),
+            _ => panic!("Expected binary operator"),
+        };
+        let left = self.evaluate_node(&left);
+        let right = self.evaluate_node(&right);
+        match operator.as_str() {
             "+" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left + right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node.clone(),
             },
             "-" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left - right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "*" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left * right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "/" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left / right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "%" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left % right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "<" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left < right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             ">" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left > right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "=" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left == right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "|" => match (left, right) {
                 (Node::Boolean(left), Node::Boolean(right)) => Node::Boolean(left || right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "&" => match (left, right) {
                 (Node::Boolean(left), Node::Boolean(right)) => Node::Boolean(left && right),
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "." => match (left, right) {
                 (Node::String(left), Node::String(right)) => {
                     let result = left + &right;
                     Node::String(result)
                 }
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "T" => match (left, right) {
                 (Node::String(left), Node::Integer(right)) => {
                     let result = left.chars().take(right as usize).collect();
                     Node::String(result)
                 }
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
             "D" => match (left, right) {
                 (Node::String(left), Node::Integer(right)) => {
                     let result = left.chars().skip(right as usize).collect();
                     Node::String(result)
                 }
-                _ => panic!("Unsupported operands for binary operator"),
+                _ => node,
             },
-            // apply term x to y
+            // apply term x to y, find variable using DFS, replace it with y and evaluate
             "$" => match (left, right) {
-                _ => panic!("Unsupported operands for binary operator"),
+                (Node::Lambda(arity, body), arg) => {
+                    let mut variables = HashMap::new();
+                    variables.insert(arity, arg);
+                    let result = self.evaluate_node(&self.replace_variable(&body, &variables));
+                    result
+                }
+                _ => node,
             },
             _ => panic!("Unsupported binary operator: {}", operator),
+        }
+    }
+
+    fn replace_variable(&self, node: &Node, variables: &HashMap<usize, Node>) -> Node {
+        match node {
+            Node::Integer(_) => node.clone(),
+            Node::String(_) => node.clone(),
+            Node::Boolean(_) => node.clone(),
+            Node::Variable(index) => match variables.get(index) {
+                Some(value) => value.clone(),
+                None => node.clone(),
+            },
+            Node::Lambda(arity, body) => {
+                let mut new_variables = variables.clone();
+                new_variables.insert(*arity, Node::Variable(*arity));
+                let new_body = self.replace_variable(body, &new_variables);
+                Node::Lambda(*arity, Box::new(new_body))
+            }
+            Node::UnaryOperator(operator, operand) => {
+                let new_operand = self.replace_variable(operand, variables);
+                Node::UnaryOperator(operator.clone(), Box::new(new_operand))
+            }
+            Node::BinaryOperator(operator, left, right) => {
+                let new_left = self.replace_variable(left, variables);
+                let new_right = self.replace_variable(right, variables);
+                Node::BinaryOperator(operator.clone(), Box::new(new_left), Box::new(new_right))
+            }
+            _ => panic!("Unsupported node: {:?}", node),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{parser::Parser, tokenizer::Tokenizer};
+
     use super::*;
 
     #[test]
@@ -211,18 +260,97 @@ mod tests {
         ];
         for (operator, left, right, expected) in cases {
             assert_eq!(
-                evaluator.evaluate_binary_operator(operator, left, right),
+                evaluator.evaluate_binary_operator(Node::BinaryOperator(
+                    operator.to_string(),
+                    Box::new(left),
+                    Box::new(right)
+                )),
                 expected
             );
         }
     }
 
     #[test]
-    fn test_evaluate() {
-        let evaluator = Evaluator::new(Node::UnaryOperator(
-            "-".to_string(),
+    fn test_evaluate_lambda() {
+        let evaluator = Evaluator::new(Node::Lambda(
+            1,
+            Box::new(Node::BinaryOperator(
+                "+".to_string(),
+                Box::new(Node::Integer(1)),
+                Box::new(Node::Integer(2)),
+            )),
+        ));
+        assert_eq!(
+            evaluator.evaluate(),
+            Node::Lambda(1, Box::new(Node::Integer(3)))
+        );
+
+        let evaluator = Evaluator::new(Node::Lambda(
+            1,
+            Box::new(Node::BinaryOperator(
+                "+".to_string(),
+                Box::new(Node::Integer(1)),
+                Box::new(Node::Variable(2)),
+            )),
+        ));
+        assert_eq!(
+            evaluator.evaluate(),
+            Node::Lambda(
+                1,
+                Box::new(Node::BinaryOperator(
+                    "+".to_string(),
+                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Variable(2))
+                ))
+            )
+        );
+
+        let evaluator = Evaluator::new(Node::BinaryOperator(
+            "$".to_string(),
+            Box::new(Node::Lambda(
+                1,
+                Box::new(Node::BinaryOperator(
+                    "+".to_string(),
+                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Variable(1)),
+                )),
+            )),
             Box::new(Node::Integer(42)),
         ));
-        assert_eq!(evaluator.evaluate(), Node::Integer(-42));
+        assert_eq!(evaluator.evaluate(), Node::Integer(43));
+
+        let evaluator = Evaluator::new(Node::BinaryOperator(
+            "$".to_string(),
+            Box::new(Node::BinaryOperator(
+                "$".to_string(),
+                Box::new(Node::Lambda(
+                    2,
+                    Box::new(Node::Lambda(
+                        1,
+                        Box::new(Node::BinaryOperator(
+                            "+".to_string(),
+                            Box::new(Node::Variable(1)),
+                            Box::new(Node::Variable(2)),
+                        )),
+                    )),
+                )),
+                Box::new(Node::Integer(42)),
+            )),
+            Box::new(Node::Integer(43)),
+        ));
+        assert_eq!(evaluator.evaluate(), Node::Integer(85));
+    }
+
+    #[test]
+    fn test_evaluate() {
+        let mut tokenizer = Tokenizer::new("B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK");
+        let tokens = tokenizer.tokenize();
+        let mut parser = Parser::new(&tokens);
+        let node = parser.parse();
+        let evaluator = Evaluator::new(node);
+        assert_eq!(
+            evaluator.evaluate(),
+            Node::String("Hello World!".to_string())
+        );
     }
 }
