@@ -71,8 +71,8 @@ impl Evaluator {
             Node::BinaryOperator(ref operator, ref left, ref right) => (operator, left, right),
             _ => panic!("Expected binary operator"),
         };
-        let left = self.evaluate_node(&left);
-        let right = self.evaluate_node(&right);
+        let left = self.evaluate_node(left);
+        let right = self.evaluate_node(right);
         match operator.as_str() {
             "+" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Integer(left + right),
@@ -104,6 +104,8 @@ impl Evaluator {
             },
             "=" => match (left, right) {
                 (Node::Integer(left), Node::Integer(right)) => Node::Boolean(left == right),
+                (Node::String(left), Node::String(right)) => Node::Boolean(left == right),
+                (Node::Boolean(left), Node::Boolean(right)) => Node::Boolean(left == right),
                 _ => node,
             },
             "|" => match (left, right) {
@@ -122,15 +124,15 @@ impl Evaluator {
                 _ => node,
             },
             "T" => match (left, right) {
-                (Node::String(left), Node::Integer(right)) => {
-                    let result = left.chars().take(right as usize).collect();
+                (Node::Integer(left), Node::String(right)) => {
+                    let result = right.chars().take(left as usize).collect();
                     Node::String(result)
                 }
                 _ => node,
             },
             "D" => match (left, right) {
-                (Node::String(left), Node::Integer(right)) => {
-                    let result = left.chars().skip(right as usize).collect();
+                (Node::Integer(left), Node::String(right)) => {
+                    let result = right.chars().skip(left as usize).collect();
                     Node::String(result)
                 }
                 _ => node,
@@ -140,8 +142,7 @@ impl Evaluator {
                 (Node::Lambda(arity, body), arg) => {
                     let mut variables = HashMap::new();
                     variables.insert(arity, arg);
-                    let result = self.evaluate_node(&self.replace_variable(&body, &variables));
-                    result
+                    self.evaluate_node(&self.replace_variable(&body, &variables))
                 }
                 _ => node,
             },
@@ -247,14 +248,14 @@ mod tests {
             ),
             (
                 "T",
-                Node::String("test".to_string()),
                 Node::Integer(3),
+                Node::String("test".to_string()),
                 Node::String("tes".to_string()),
             ),
             (
                 "D",
-                Node::String("test".to_string()),
                 Node::Integer(3),
+                Node::String("test".to_string()),
                 Node::String("t".to_string()),
             ),
         ];
