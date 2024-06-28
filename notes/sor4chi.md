@@ -24,5 +24,13 @@ Unknown instruction: \"unary # is not...ect\"
 language_test出力の`unary # is nota correct`に`echo `をpreprendして送信。
 
 ```txt
-unary # is not correct\n\nou scored some points for using the echo service!\n
+unary # is not correct
+
+ou scored some points for using the echo service!
 ```
+
+### [2:36] リーダーボード眺めてて`get lambdaman`できることに気づく
+
+`get lambdaman`を送信。
+
+[これが帰ってきた](./lambdaman/intro.md)
