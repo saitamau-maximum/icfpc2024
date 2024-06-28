@@ -20,8 +20,7 @@ indicator が `I` かつ body は 94 進数で表現。
 ## 文字列
 
 indicator が `S` かつ body は ASCII 文字列。
-しかし、 `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&'()*+,-./:;<=>?@[\]^_`|~<space><newline>` がよくわからん順序で並んでいる。
-どうにかして求めて上げる必要がありそう。
+ASCII 33 - 126 は順番に `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&'()*+,-./:;<=>?@[\]^_`|~<space><newline>` に対応している。
 
 例として `SB%,,/}Q/2,$_` は `Hello, World!` になる。
 よって、 `B` は `H`, `%` は `e`, ... に対応することがわかる。
