@@ -12,6 +12,41 @@ pub enum Node {
     Lambda(usize, Box<Node>),
 }
 
+impl Node {
+    pub fn dump_tree(&self, indent: usize) {
+        match self {
+            Node::Integer(value) => println!("{:indent$}Integer({})", "", value, indent = indent),
+            Node::String(value) => println!("{:indent$}String({})", "", value, indent = indent),
+            Node::Boolean(value) => println!("{:indent$}Boolean({})", "", value, indent = indent),
+            Node::Variable(value) => println!("{:indent$}Variable({})", "", value, indent = indent),
+            Node::UnaryOperator(operator, operand) => {
+                println!("{:indent$}UnaryOperator({})", "", operator, indent = indent);
+                operand.dump_tree(indent + 2);
+            }
+            Node::BinaryOperator(operator, left, right) => {
+                println!(
+                    "{:indent$}BinaryOperator({})",
+                    "",
+                    operator,
+                    indent = indent
+                );
+                left.dump_tree(indent + 2);
+                right.dump_tree(indent + 2);
+            }
+            Node::If(condition, then_branch, else_branch) => {
+                println!("{:indent$}If", "", indent = indent);
+                condition.dump_tree(indent + 2);
+                then_branch.dump_tree(indent + 2);
+                else_branch.dump_tree(indent + 2);
+            }
+            Node::Lambda(arity, body) => {
+                println!("{:indent$}Lambda({})", "", arity, indent = indent);
+                body.dump_tree(indent + 2);
+            }
+        }
+    }
+}
+
 pub struct Parser<'a> {
     tokens: &'a [Token],
     position: usize,
