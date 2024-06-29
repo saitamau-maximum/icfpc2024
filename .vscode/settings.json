@@ -1,3 +1,3 @@
 {
-  "rust-analyzer.linkedProjects": ["visualizer/wasm/Cargo.toml"]
+  "rust-analyzer.linkedProjects": ["Cargo.toml", "visualizer/wasm/Cargo.toml"]
 }
