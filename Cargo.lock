@@ -376,6 +376,7 @@ dependencies = [
  "dotenv",
  "rand",
  "reqwest",
+ "rust_lisp",
  "serde",
  "serde_json",
  "svg",
@@ -756,6 +757,15 @@ dependencies = [
  "spin",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rust_lisp"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5c5734eceb60a15465bc85cafe540f454b79e23732bf56f913d081d9ae008ee"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
