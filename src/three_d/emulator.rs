@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
 
 use super::tokenizer::{Direction, Operator, Token};
 
@@ -33,11 +36,11 @@ impl Emulator {
             })
             .next()
             .unwrap();
-        let history = vec![board.clone()];
+        let history = vec![];
         Emulator {
             board,
             submit_pos,
-            tick_count: 0,
+            tick_count: 1,
             history,
         }
     }
@@ -45,12 +48,13 @@ impl Emulator {
     pub fn tick(&mut self) -> bool {
         self.tick_count += 1;
         let (new_board, rollback) = self.peek();
-        self.board = new_board;
         if rollback > 0 {
-            self.board = self.history.pop().unwrap();
-            self.tick_count -= 1;
+            eprintln!("rollback: {}", rollback);
+            self.history.truncate(self.history.len() - rollback + 1);
+            self.tick_count -= rollback + 1;
             return false;
         }
+        self.board = new_board;
         self.history.push(self.board.clone());
         self.is_finished()
     }
@@ -68,6 +72,12 @@ impl Emulator {
         // 次の状態が同じなら詰み
         let (next_board, _) = self.peek();
         next_board == self.board
+    }
+
+    fn get_history(&self, n: usize) -> Vec<Vec<Token>> {
+        eprintln!("self.history.len(): {}", self.history.len());
+        eprintln!("get_history: {}", n);
+        self.history[self.history.len() - n].clone()
     }
 
     pub fn peek(&self) -> (Vec<Vec<Token>>, usize) {
@@ -243,6 +253,68 @@ impl Emulator {
                     clear_pos.push((i, j - 1));
                     clear_pos.push((i - 1, j));
                 }
+            }
+        }
+        {
+            // OperatorのWarpの場所を取得
+            let mut operator_pos = vec![];
+            for (i, row) in self.board.iter().enumerate() {
+                for (j, cell) in row.iter().enumerate() {
+                    if let Token::Operator(Operator::Warp) = cell {
+                        operator_pos.push((i, j));
+                    }
+                }
+            }
+            // OperatorのWarpの計算
+            // 何tick前にどこに何を書き込むか
+            let mut warps = HashMap::new();
+            for (i, j) in operator_pos {
+                // オペランドは上下左右全て
+                let (v, dx, dy, dt) = (
+                    self.board[i - 1][j].clone(),
+                    self.board[i][j - 1].clone(),
+                    self.board[i][j + 1].clone(),
+                    self.board[i + 1][j].clone(),
+                );
+                // 条件は全てInteger
+                if let (
+                    Token::Integer(v),
+                    Token::Integer(dx),
+                    Token::Integer(dy),
+                    Token::Integer(dt),
+                ) = (v, dx, dy, dt)
+                {
+                    // vの値をWarpマスの(-dx, -dy)に書き込み、dtだけrollbackする
+                    let (next_i, next_j) = ((i as isize - dy), (j as isize - dx));
+                    if next_i < 0
+                        || next_i >= self.board.len() as isize
+                        || next_j < 0
+                        || next_j >= self.board[0].len() as isize
+                    {
+                        continue;
+                    }
+                    // 歴史を取得して、Emptyなら書き込み、そうでないならConflict
+                    let mut history = self.get_history(dt as usize);
+                    history[next_i as usize][next_j as usize] = Token::Integer(v);
+                    if warps.contains_key(&(dt, (next_i as usize, next_j as usize))) {
+                        panic!("FORCE STOP FOR CONFLICT");
+                    }
+                    warps.insert((dt, (next_i as usize, next_j as usize)), v);
+                }
+            }
+            // Warpが複数の違うtickに書き込む場合、panic
+            let dt_variant: HashSet<&isize> = HashSet::from_iter(warps.keys().map(|(dt, _)| dt));
+            if dt_variant.len() > 1 {
+                panic!("FORCE STOP FOR CONFLICT");
+            }
+            if dt_variant.len() == 1 {
+                // 一番最後の状態を取得
+                let last_dt = *dt_variant.iter().next().unwrap();
+                let mut history = self.get_history(*last_dt as usize);
+                for ((_, (i, j)), v) in &warps {
+                    history[*i][*j] = Token::Integer(*v);
+                }
+                return (history, *last_dt as usize);
             }
         }
 
@@ -687,16 +759,58 @@ S 2 .
     }
 
     #[test]
+    fn test_emulator_warp() {
+        let mut tokenizer = Tokenizer::new(
+            r#"
+2 > . .
+. 2 @ 0
+S . 1 .
+"#,
+        );
+        let tokens = tokenizer.tokenize();
+        let mut emulator = Emulator::new(tokens);
+        let mut cnt = 3;
+        while cnt > 0 {
+            emulator.tick();
+            eprintln!("{}", emulator.to_string());
+            cnt -= 1;
+        }
+        assert_eq!(
+            emulator.board,
+            vec![
+                vec![
+                    Token::Integer(2),
+                    Token::Operator(Operator::Redirect(Direction::Right)),
+                    Token::Empty,
+                    Token::Empty
+                ],
+                vec![
+                    Token::Integer(2),
+                    Token::Integer(2),
+                    Token::Operator(Operator::Warp),
+                    Token::Integer(0)
+                ],
+                vec![
+                    Token::Operator(Operator::Submit),
+                    Token::Empty,
+                    Token::Integer(1),
+                    Token::Empty
+                ]
+            ]
+        );
+    }
+
+    #[test]
     fn test_emulator_integration() {
         let mut tokenizer = Tokenizer::new(
             r#"
 . . . . 0 . . . .
-. 3 > . = . . . .
+. 4 > . = . . . .
 . v 1 . . > . . .
 . . - . . . + S .
 . . . . . ^ . . .
 . . v . . 0 > . .
-. . . . . . 4 + .
+. . . . . . 3 + .
 . 1 @ 6 . . < . .
 . . 3 . 0 @ 3 . .
 . . . . . 3 . . .
@@ -704,7 +818,12 @@ S 2 .
         );
         let tokens = tokenizer.tokenize();
         let mut emulator = Emulator::new(tokens);
-        emulator.tick();
-        eprintln!("{}", emulator.to_string());
+        let mut cnt = 30;
+        while cnt > 0 {
+            eprintln!("{}", emulator.tick_count);
+            eprintln!("{}", emulator.to_string());
+            emulator.tick();
+            cnt -= 1;
+        }
     }
 }
