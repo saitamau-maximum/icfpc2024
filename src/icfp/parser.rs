@@ -1,3 +1,5 @@
+use crate::icfp::util::{convert_integer, deconvert_integer, deconvert_string};
+
 use super::tokenizer::Token;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -44,6 +46,44 @@ impl Node {
                 body.dump_tree(indent + 2);
             }
         }
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut tokens: Vec<Token> = vec![];
+        fn traverse(node: &Node, tokens: &mut Vec<Token>) {
+            match node {
+                Node::Integer(value) => tokens.push(Token::Integer(*value as usize)),
+                Node::String(value) => tokens.push(Token::String(value.clone())),
+                Node::Boolean(value) => tokens.push(Token::Boolean(*value)),
+                Node::Variable(value) => tokens.push(Token::Variable(*value)),
+                Node::UnaryOperator(operator, operand) => {
+                    tokens.push(Token::UnaryOperator(operator.clone()));
+                    traverse(operand, tokens);
+                }
+                Node::BinaryOperator(operator, left, right) => {
+                    tokens.push(Token::BinaryOperator(operator.clone()));
+                    traverse(left, tokens);
+                    traverse(right, tokens);
+                }
+                Node::If(condition, then_branch, else_branch) => {
+                    tokens.push(Token::If);
+                    traverse(condition, tokens);
+                    traverse(then_branch, tokens);
+                    traverse(else_branch, tokens);
+                }
+                Node::Lambda(arity, body) => {
+                    tokens.push(Token::Lambda(*arity));
+                    traverse(body, tokens);
+                }
+                _ => {}
+            }
+        }
+        traverse(self, &mut tokens);
+        tokens
+            .iter()
+            .map(|token| token.to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
     }
 }
 
@@ -132,6 +172,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::icfp::transpiler::Transpiler;
+
     use super::*;
 
     #[test]
