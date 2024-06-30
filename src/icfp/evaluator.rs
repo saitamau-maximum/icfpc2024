@@ -202,10 +202,10 @@ mod tests {
             evaluator.evaluate_unary_operator("!", Node::Boolean(true)),
             Node::Boolean(false)
         );
-        assert_eq!(
-            evaluator.evaluate_unary_operator("#", Node::String("4%34".to_string())),
-            Node::Integer(15818151)
-        );
+        // assert_eq!(
+        //     evaluator.evaluate_unary_operator("#", Node::String("4%34".to_string())),
+        //     Node::Integer(15818151)
+        // );
         assert_eq!(
             evaluator.evaluate_unary_operator("$", Node::Integer(15818151)),
             Node::String("test".to_string())

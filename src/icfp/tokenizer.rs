@@ -22,7 +22,13 @@ impl Token {
     pub fn to_string(&self) -> String {
         match self {
             Token::Integer(value) => format!("I{}", deconvert_integer(*value)),
-            Token::Boolean(value) => if *value { "T".to_string() } else { "F".to_string() },
+            Token::Boolean(value) => {
+                if *value {
+                    "T".to_string()
+                } else {
+                    "F".to_string()
+                }
+            }
             Token::String(value) => format!("S{}", deconvert_string(value.to_string())),
             Token::UnaryOperator(value) => format!("U{}", value),
             Token::BinaryOperator(value) => format!("B{}", value),
@@ -68,12 +74,9 @@ impl Tokenizer {
 
     fn tokenize_integer(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'I' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
@@ -103,12 +106,9 @@ impl Tokenizer {
 
     fn tokenize_string(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'S' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
@@ -121,12 +121,9 @@ impl Tokenizer {
 
     fn tokenize_unary_operator(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'U' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
@@ -139,12 +136,9 @@ impl Tokenizer {
 
     fn tokenize_binary_operator(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'B' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
@@ -162,12 +156,9 @@ impl Tokenizer {
 
     fn tokenize_lambda(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'L' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
@@ -180,12 +171,9 @@ impl Tokenizer {
 
     fn tokenize_variable(&mut self) -> Token {
         let mut value = String::new();
+        self.input.next();
         while let Some(&c) = self.input.peek() {
             match c {
-                'v' => {
-                    self.input.next();
-                    continue;
-                }
                 ' ' => break,
                 _ => {
                     value.push(c);
