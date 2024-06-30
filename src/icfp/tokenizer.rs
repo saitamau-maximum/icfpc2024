@@ -1,13 +1,18 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use super::util::{convert_integer, convert_string, deconvert_integer, deconvert_string};
+use num_bigint::BigInt;
+
+use super::util::{
+    convert_integer, convert_integer_to_bigint, convert_string, deconvert_integer,
+    deconvert_integer_from_bigint, deconvert_string,
+};
 
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    Integer(usize),
+    Integer(BigInt),
     Boolean(bool),
     String(String),
     UnaryOperator(String),
@@ -21,7 +26,7 @@ pub enum Token {
 impl Token {
     pub fn to_string(&self) -> String {
         match self {
-            Token::Integer(value) => format!("I{}", deconvert_integer(*value)),
+            Token::Integer(value) => format!("I{}", deconvert_integer_from_bigint(value.clone())),
             Token::Boolean(value) => {
                 if *value {
                     "T".to_string()
@@ -84,7 +89,7 @@ impl Tokenizer {
                 }
             }
         }
-        Token::Integer(convert_integer(value))
+        Token::Integer(convert_integer_to_bigint(value))
     }
 
     fn tokenize_boolean(&mut self) -> Token {
@@ -207,9 +212,9 @@ mod tests {
     fn test_tokenize_integer() {
         let input = "I/6 + I5";
         let expected = vec![
-            Token::Integer(1337),
+            Token::Integer(BigInt::from(1337)),
             Token::Unknown("+".to_string()),
-            Token::Integer(20),
+            Token::Integer(BigInt::from(20)),
         ];
         let mut tokenizer = Tokenizer::new(input);
         let result = tokenizer.tokenize();

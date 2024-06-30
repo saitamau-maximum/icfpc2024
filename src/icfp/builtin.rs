@@ -1,3 +1,5 @@
+use num_bigint::BigInt;
+
 use crate::icfp::util::STRING_ASCII;
 
 use super::{
@@ -59,7 +61,7 @@ pub fn repeat_char() -> Node {
                 node!(Node::BinaryOperator(
                     ">".to_string(),
                     node!(Node::Variable(1)),
-                    node!(Node::Integer(BASE94)) // 1文字以上からじゃないと出力できないようにする（ICFPに空文字列が存在しないため）
+                    node!(Node::Integer(BigInt::from(BASE94))) // 1文字以上からじゃないと出力できないようにする（ICFPに空文字列が存在しないため）
                 )),
                 node!(Node::BinaryOperator(
                     ".".to_string(),
@@ -68,7 +70,7 @@ pub fn repeat_char() -> Node {
                         node!(Node::BinaryOperator(
                             "%".to_string(),
                             node!(Node::Variable(1)),
-                            node!(Node::Integer(BASE94))
+                            node!(Node::Integer(BigInt::from(BASE94)))
                         ))
                     )),
                     node!(Node::BinaryOperator(
@@ -77,7 +79,7 @@ pub fn repeat_char() -> Node {
                         node!(Node::BinaryOperator(
                             "-".to_string(),
                             node!(Node::Variable(1)),
-                            node!(Node::Integer(BASE94))
+                            node!(Node::Integer(BigInt::from(BASE94)))
                         ))
                     ))
                 )),
@@ -90,7 +92,7 @@ pub fn repeat_char() -> Node {
 pub fn repeat_char_operator(value: char, times: usize) -> Node {
     assert!(times >= 1);
     let value_id = STRING_ASCII.find(value).unwrap();
-    Node::Integer(BASE94 * times as isize + value_id as isize)
+    Node::Integer(BigInt::from(BASE94 * times as isize + value_id as isize))
 }
 
 #[cfg(test)]
@@ -108,7 +110,7 @@ mod tests {
                 node!(y_combinator()),
                 node!(repeat_char())
             )),
-            node!(Node::Integer(BASE94 * 1 + 5))
+            node!(Node::Integer(BigInt::from(BASE94 * 20 + 5)))
         ));
         node.dump_tree(0);
         eprintln!("{}", node.to_string());
@@ -120,6 +122,6 @@ mod tests {
     #[test]
     fn test_repeat_operator() {
         let node = repeat_char_operator('a', 3);
-        assert_eq!(node, Node::Integer(282));
+        assert_eq!(node, Node::Integer(BigInt::from(282)));
     }
 }

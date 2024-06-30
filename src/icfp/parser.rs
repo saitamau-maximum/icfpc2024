@@ -1,10 +1,14 @@
-use crate::icfp::util::{convert_integer, deconvert_integer, deconvert_string};
+use num_bigint::BigInt;
+
+use crate::icfp::util::{
+    convert_integer_to_bigint, deconvert_integer_from_bigint, deconvert_string,
+};
 
 use super::tokenizer::Token;
 
 #[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub enum Node {
-    Integer(isize),
+    Integer(BigInt),
     String(String),
     Boolean(bool),
     Variable(usize),
@@ -105,7 +109,7 @@ impl Node {
         let mut tokens: Vec<Token> = vec![];
         fn traverse(node: &Node, tokens: &mut Vec<Token>) {
             match node {
-                Node::Integer(value) => tokens.push(Token::Integer(*value as usize)),
+                Node::Integer(value) => tokens.push(Token::Integer(BigInt::from(value.clone()))),
                 Node::String(value) => tokens.push(Token::String(value.clone())),
                 Node::Boolean(value) => tokens.push(Token::Boolean(*value)),
                 Node::Variable(value) => tokens.push(Token::Variable(*value)),
@@ -125,7 +129,7 @@ impl Node {
                     traverse(else_branch, tokens);
                 }
                 Node::Lambda(arity, body) => {
-                    tokens.push(Token::Lambda(*arity));
+                    tokens.push(Token::Lambda(arity.clone()));
                     traverse(body, tokens);
                 }
                 _ => {}
@@ -171,10 +175,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_node(&mut self) -> Node {
-        match self.tokens[self.position] {
+        match &self.tokens[self.position] {
             Token::Integer(value) => {
                 self.position += 1;
-                Node::Integer(value as isize)
+                Node::Integer(value.clone())
             }
             Token::String(ref value) => {
                 self.position += 1;
@@ -182,11 +186,11 @@ impl<'a> Parser<'a> {
             }
             Token::Boolean(value) => {
                 self.position += 1;
-                Node::Boolean(value)
+                Node::Boolean(value.clone())
             }
             Token::Variable(value) => {
                 self.position += 1;
-                Node::Variable(value)
+                Node::Variable(value.clone())
             }
             Token::UnaryOperator(_) => self.parse_unary(),
             Token::BinaryOperator(_) => self.parse_binary(),
@@ -226,8 +230,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_lambda(&mut self) -> Node {
-        let arity = match self.tokens[self.position] {
-            Token::Lambda(arity) => arity,
+        let arity = match &self.tokens[self.position] {
+            Token::Lambda(arity) => arity.clone(),
             _ => panic!("Expected lambda"),
         };
         self.position += 1;
@@ -244,12 +248,15 @@ mod tests {
 
     #[test]
     fn test_parse_unary() {
-        let tokens = vec![Token::UnaryOperator("-".to_string()), Token::Integer(3)];
+        let tokens = vec![
+            Token::UnaryOperator("-".to_string()),
+            Token::Integer(BigInt::from(3)),
+        ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse_unary();
         assert_eq!(
             node,
-            Node::UnaryOperator("-".to_string(), Box::new(Node::Integer(3)))
+            Node::UnaryOperator("-".to_string(), Box::new(Node::Integer(BigInt::from(3))))
         );
     }
 
@@ -258,7 +265,7 @@ mod tests {
         let tokens = vec![
             Token::UnaryOperator("-".to_string()),
             Token::UnaryOperator("-".to_string()),
-            Token::Integer(3),
+            Token::Integer(BigInt::from(3)),
         ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse_unary();
@@ -268,7 +275,7 @@ mod tests {
                 "-".to_string(),
                 Box::new(Node::UnaryOperator(
                     "-".to_string(),
-                    Box::new(Node::Integer(3))
+                    Box::new(Node::Integer(BigInt::from(3)))
                 ))
             )
         );
@@ -278,8 +285,8 @@ mod tests {
     fn test_parse_binary() {
         let tokens = vec![
             Token::BinaryOperator("+".to_string()),
-            Token::Integer(3),
-            Token::Integer(4),
+            Token::Integer(BigInt::from(3)),
+            Token::Integer(BigInt::from(4)),
         ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse_binary();
@@ -287,8 +294,8 @@ mod tests {
             node,
             Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(3)),
-                Box::new(Node::Integer(4))
+                Box::new(Node::Integer(BigInt::from(3))),
+                Box::new(Node::Integer(BigInt::from(4)))
             )
         );
     }
@@ -297,10 +304,10 @@ mod tests {
     fn test_parse_nested_binary() {
         let tokens = vec![
             Token::BinaryOperator("+".to_string()),
-            Token::Integer(3),
+            Token::Integer(BigInt::from(3)),
             Token::BinaryOperator("+".to_string()),
-            Token::Integer(4),
-            Token::Integer(5),
+            Token::Integer(BigInt::from(4)),
+            Token::Integer(BigInt::from(5)),
         ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse_binary();
@@ -308,11 +315,11 @@ mod tests {
             node,
             Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(3)),
+                Box::new(Node::Integer(BigInt::from(3))),
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Integer(4)),
-                    Box::new(Node::Integer(5))
+                    Box::new(Node::Integer(BigInt::from(4))),
+                    Box::new(Node::Integer(BigInt::from(5)))
                 ))
             )
         );
@@ -323,8 +330,8 @@ mod tests {
         let tokens = vec![
             Token::If,
             Token::BinaryOperator(">".to_string()),
-            Token::Integer(2),
-            Token::Integer(3),
+            Token::Integer(BigInt::from(2)),
+            Token::Integer(BigInt::from(3)),
             Token::String("yes".to_string()),
             Token::String("no".to_string()),
         ];
@@ -335,8 +342,8 @@ mod tests {
             Node::If(
                 Box::new(Node::BinaryOperator(
                     ">".to_string(),
-                    Box::new(Node::Integer(2)),
-                    Box::new(Node::Integer(3))
+                    Box::new(Node::Integer(BigInt::from(2))),
+                    Box::new(Node::Integer(BigInt::from(3)))
                 )),
                 Box::new(Node::String("yes".to_string())),
                 Box::new(Node::String("no".to_string()))
@@ -349,8 +356,8 @@ mod tests {
         let tokens = vec![
             Token::Lambda(1),
             Token::BinaryOperator("+".to_string()),
-            Token::Integer(1),
-            Token::Integer(2),
+            Token::Integer(BigInt::from(1)),
+            Token::Integer(BigInt::from(2)),
         ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse();
@@ -360,8 +367,8 @@ mod tests {
                 1,
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Integer(1)),
-                    Box::new(Node::Integer(2))
+                    Box::new(Node::Integer(BigInt::from(1))),
+                    Box::new(Node::Integer(BigInt::from(2)))
                 ))
             )
         );
@@ -375,7 +382,7 @@ mod tests {
             Token::BinaryOperator(".".to_string()),
             Token::String("Hello".to_string()),
             Token::String(" World!".to_string()),
-            Token::Integer(42),
+            Token::Integer(BigInt::from(42)),
         ];
         let mut parser = Parser::new(&tokens);
         let node = parser.parse();
@@ -395,7 +402,7 @@ mod tests {
                         Box::new(Node::String(" World!".to_string()))
                     ))
                 )),
-                Box::new(Node::Integer(42))
+                Box::new(Node::Integer(BigInt::from(42)))
             )
         );
     }

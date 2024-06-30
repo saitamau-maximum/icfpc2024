@@ -5,6 +5,7 @@ use icfpc2024::{
     },
     node,
 };
+use num_bigint::BigInt;
 use std::{collections::VecDeque, io::stdin, iter::repeat};
 
 fn get_compress_collection(text: &str) -> VecDeque<(char, usize)> {

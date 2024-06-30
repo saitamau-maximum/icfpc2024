@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 const API_URL: &str = "https://boundvariable.space/communicate";
 const COMMAND: &str = "get lambdaman";
 const SAVE_DIR: &str = "downloads";
-const START_ID: usize = 9;
-const END_ID: usize = 9;
+const START_ID: usize = 21;
+const END_ID: usize = 21;
 // ==============================
 
 struct Env {

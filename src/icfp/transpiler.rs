@@ -77,6 +77,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use num_bigint::BigInt;
     use rust_lisp::default_env;
     use rust_lisp::interpreter::eval;
     use rust_lisp::model::Value;
@@ -86,8 +87,8 @@ mod tests {
     fn test_transpile() {
         let node = Node::BinaryOperator(
             "+".to_string(),
-            Box::new(Node::Integer(1)),
-            Box::new(Node::Integer(2)),
+            Box::new(Node::Integer(BigInt::from(1))),
+            Box::new(Node::Integer(BigInt::from(2))),
         );
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
@@ -103,11 +104,11 @@ mod tests {
     fn test_transpile_nested() {
         let node = Node::BinaryOperator(
             "+".to_string(),
-            Box::new(Node::Integer(1)),
+            Box::new(Node::Integer(BigInt::from(1))),
             Box::new(Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(2)),
-                Box::new(Node::Integer(3)),
+                Box::new(Node::Integer(BigInt::from(2))),
+                Box::new(Node::Integer(BigInt::from(3))),
             )),
         );
         let transpiler = Transpiler::new(node);
@@ -124,8 +125,8 @@ mod tests {
     fn test_transpile_if() {
         let node = Node::If(
             Box::new(Node::Boolean(true)),
-            Box::new(Node::Integer(1)),
-            Box::new(Node::Integer(2)),
+            Box::new(Node::Integer(BigInt::from(1))),
+            Box::new(Node::Integer(BigInt::from(2))),
         );
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
@@ -138,8 +139,8 @@ mod tests {
 
         let node = Node::If(
             Box::new(Node::Boolean(false)),
-            Box::new(Node::Integer(1)),
-            Box::new(Node::Integer(2)),
+            Box::new(Node::Integer(BigInt::from(1))),
+            Box::new(Node::Integer(BigInt::from(2))),
         );
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
@@ -157,7 +158,7 @@ mod tests {
             2,
             Box::new(Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(1)),
+                Box::new(Node::Integer(BigInt::from(1))),
                 Box::new(Node::Variable(2)),
             )),
         );
@@ -196,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_transpile_unary_operator() {
-        let node = Node::UnaryOperator("-".to_string(), Box::new(Node::Integer(1)));
+        let node = Node::UnaryOperator("-".to_string(), Box::new(Node::Integer(BigInt::from(1))));
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
         assert_eq!(result, "-1");
@@ -220,11 +221,11 @@ mod tests {
                 3,
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Integer(4)),
+                    Box::new(Node::Integer(BigInt::from(4))),
                     Box::new(Node::Variable(3)),
                 )),
             )),
-            Box::new(Node::Integer(1)),
+            Box::new(Node::Integer(BigInt::from(1))),
         );
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
@@ -244,10 +245,10 @@ mod tests {
                             Box::new(Node::Variable(3)),
                         )),
                     )),
-                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Integer(BigInt::from(1))),
                 )),
             )),
-            Box::new(Node::Integer(2)),
+            Box::new(Node::Integer(BigInt::from(2))),
         );
         let transpiler = Transpiler::new(node);
         let result = transpiler.transpile();
@@ -273,7 +274,7 @@ mod tests {
                             Box::new(Node::Variable(3)),
                         )),
                     )),
-                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Integer(BigInt::from(1))),
                 )),
             )),
             Box::new(Node::BinaryOperator(
@@ -282,11 +283,11 @@ mod tests {
                     3,
                     Box::new(Node::BinaryOperator(
                         "+".to_string(),
-                        Box::new(Node::Integer(4)),
+                        Box::new(Node::Integer(BigInt::from(4))),
                         Box::new(Node::Variable(3)),
                     )),
                 )),
-                Box::new(Node::Integer(2)),
+                Box::new(Node::Integer(BigInt::from(2))),
             )),
         );
         let transpiler = Transpiler::new(node);
@@ -306,7 +307,7 @@ mod tests {
                 Box::new(Node::BinaryOperator(
                     "$".to_string(),
                     Box::new(Node::Variable(2)),
-                    Box::new(Node::Integer(2)),
+                    Box::new(Node::Integer(BigInt::from(2))),
                 )),
             )),
             Box::new(Node::Lambda(
@@ -314,7 +315,7 @@ mod tests {
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
                     Box::new(Node::Variable(1)),
-                    Box::new(Node::Integer(3)),
+                    Box::new(Node::Integer(BigInt::from(3))),
                 )),
             )),
         );

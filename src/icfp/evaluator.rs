@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
+use num_bigint::BigInt;
+
 use super::parser::Node;
-use super::util::{convert_integer, convert_string, deconvert_integer, deconvert_string};
+use super::util::{
+    convert_integer_to_bigint, convert_string, deconvert_integer_from_bigint, deconvert_string,
+};
 
 pub struct Evaluator {
     node: Node,
@@ -34,14 +38,12 @@ impl Evaluator {
             return result.clone();
         }
         self.eval_count += 1;
-        // println!("======= evaluating node start: {} =======", node.name());
-        // node.dump_tree(0);
         let result = match node {
             Node::Integer(_) => node.clone(),
             Node::String(_) => node.clone(),
             Node::Boolean(_) => node.clone(),
             Node::Variable(_) => node.clone(),
-            Node::Lambda(arity, body) => Node::Lambda(*arity, body.clone()),
+            Node::Lambda(arity, body) => Node::Lambda(arity.clone(), body.clone()),
             Node::UnaryOperator(operator, operand) => {
                 self.evaluate_unary_operator(operator, *operand.clone())
             }
@@ -76,15 +78,15 @@ impl Evaluator {
             "#" => match operand {
                 Node::String(value) => {
                     let result = deconvert_string(value);
-                    let result = convert_integer(result);
-                    Node::Integer(result as isize)
+                    let result = convert_integer_to_bigint(result);
+                    Node::Integer(result)
                 }
                 _ => panic!("Unsupported operand for unary operator: {:?}", operand),
             },
             // int to string
             "$" => match operand {
                 Node::Integer(value) => {
-                    let result = deconvert_integer(value as usize);
+                    let result = deconvert_integer_from_bigint(value);
                     let result = convert_string(result);
                     Node::String(result)
                 }
@@ -111,10 +113,19 @@ impl Evaluator {
         // right.edump_tree(0);
         // eprintln!("NODE_NAME: {}", node.name());
         match (operator.as_str(), left, right) {
-            ("+", Node::Integer(left), Node::Integer(right)) => Node::Integer(left + right),
+            ("+", Node::Integer(left), Node::Integer(right)) => {
+                let result = left + right;
+                eprintln!("{}", result.to_string());
+                Node::Integer(result)
+            }
             ("-", Node::Integer(left), Node::Integer(right)) => Node::Integer(left - right),
             ("*", Node::Integer(left), Node::Integer(right)) => Node::Integer(left * right),
-            ("/", Node::Integer(left), Node::Integer(right)) => Node::Integer(left / right),
+            ("/", Node::Integer(left), Node::Integer(right)) => {
+                eprintln!("divided! / {}", right);
+                let result = left / right;
+                eprintln!("divided digit: {}", result.to_string().len());
+                Node::Integer(result)
+            }
             ("%", Node::Integer(left), Node::Integer(right)) => Node::Integer(left % right),
             ("<", Node::Integer(left), Node::Integer(right)) => Node::Boolean(left < right),
             (">", Node::Integer(left), Node::Integer(right)) => Node::Boolean(left > right),
@@ -128,11 +139,13 @@ impl Evaluator {
                 Node::String(result)
             }
             ("T", Node::Integer(left), Node::String(right)) => {
-                let result = right.chars().take(left as usize).collect();
+                let left_usize = left.to_string().parse::<usize>().unwrap();
+                let result = right.chars().take(left_usize).collect();
                 Node::String(result)
             }
             ("D", Node::Integer(left), Node::String(right)) => {
-                let result = right.chars().skip(left as usize).collect();
+                let left_usize = left.to_string().parse::<usize>().unwrap();
+                let result = right.chars().skip(left_usize).collect();
                 Node::String(result)
             }
             ("$", Node::Lambda(_, _), Node::Lambda(_, _)) => {
@@ -178,7 +191,7 @@ impl Evaluator {
             _ => panic!("The left side of $ operator must be a lambda"),
         };
         let mut variables = HashMap::new();
-        variables.insert(*lambda, arg.clone());
+        variables.insert(lambda.clone(), arg.clone());
         self.replace_variable(&body, &variables)
     }
 
@@ -193,9 +206,9 @@ impl Evaluator {
             },
             Node::Lambda(arity, body) => {
                 let mut new_variables = variables.clone();
-                new_variables.insert(*arity, Node::Variable(*arity));
+                new_variables.insert(arity.clone(), Node::Variable(arity.clone()));
                 let new_body = self.replace_variable(body, &new_variables);
-                Node::Lambda(*arity, Box::new(new_body))
+                Node::Lambda(arity.clone(), Box::new(new_body))
             }
             Node::UnaryOperator(operator, operand) => {
                 let new_operand = self.replace_variable(operand, variables);
@@ -232,10 +245,10 @@ mod tests {
 
     #[test]
     fn test_evaluate_unary_operator() {
-        let mut evaluator = Evaluator::new(Node::Integer(42));
+        let mut evaluator = Evaluator::new(Node::Integer(BigInt::from(42)));
         assert_eq!(
-            evaluator.evaluate_unary_operator("-", Node::Integer(42)),
-            Node::Integer(-42)
+            evaluator.evaluate_unary_operator("-", Node::Integer(BigInt::from(42))),
+            Node::Integer(BigInt::from(-42))
         );
         assert_eq!(
             evaluator.evaluate_unary_operator("!", Node::Boolean(true)),
@@ -243,34 +256,64 @@ mod tests {
         );
         // assert_eq!(
         //     evaluator.evaluate_unary_operator("#", Node::String("4%34".to_string())),
-        //     Node::Integer(15818151)
+        //     Node::Integer(BigInt::from(15818151))
         // );
         assert_eq!(
-            evaluator.evaluate_unary_operator("$", Node::Integer(15818151)),
+            evaluator.evaluate_unary_operator("$", Node::Integer(BigInt::from(15818151))),
             Node::String("test".to_string())
         );
     }
 
     #[test]
     fn test_evaluate_binary_operator() {
-        let mut evaluator = Evaluator::new(Node::Integer(42));
+        let mut evaluator = Evaluator::new(Node::Integer(BigInt::from(42)));
         let cases = vec![
-            ("+", Node::Integer(2), Node::Integer(3), Node::Integer(5)),
-            ("-", Node::Integer(3), Node::Integer(2), Node::Integer(1)),
-            ("*", Node::Integer(3), Node::Integer(2), Node::Integer(6)),
-            ("/", Node::Integer(-7), Node::Integer(2), Node::Integer(-3)),
-            ("%", Node::Integer(-7), Node::Integer(2), Node::Integer(-1)),
+            (
+                "+",
+                Node::Integer(BigInt::from(2)),
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(5)),
+            ),
+            (
+                "-",
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(2)),
+                Node::Integer(BigInt::from(1)),
+            ),
+            (
+                "*",
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(2)),
+                Node::Integer(BigInt::from(6)),
+            ),
+            (
+                "/",
+                Node::Integer(BigInt::from(-7)),
+                Node::Integer(BigInt::from(2)),
+                Node::Integer(BigInt::from(-3)),
+            ),
+            (
+                "%",
+                Node::Integer(BigInt::from(-7)),
+                Node::Integer(BigInt::from(2)),
+                Node::Integer(BigInt::from(-1)),
+            ),
             (
                 "<",
-                Node::Integer(3),
-                Node::Integer(2),
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(2)),
                 Node::Boolean(false),
             ),
-            (">", Node::Integer(3), Node::Integer(2), Node::Boolean(true)),
+            (
+                ">",
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(2)),
+                Node::Boolean(true),
+            ),
             (
                 "=",
-                Node::Integer(3),
-                Node::Integer(2),
+                Node::Integer(BigInt::from(3)),
+                Node::Integer(BigInt::from(2)),
                 Node::Boolean(false),
             ),
             (
@@ -293,13 +336,13 @@ mod tests {
             ),
             (
                 "T",
-                Node::Integer(3),
+                Node::Integer(BigInt::from(3)),
                 Node::String("test".to_string()),
                 Node::String("tes".to_string()),
             ),
             (
                 "D",
-                Node::Integer(3),
+                Node::Integer(BigInt::from(3)),
                 Node::String("test".to_string()),
                 Node::String("t".to_string()),
             ),
@@ -322,20 +365,27 @@ mod tests {
             1,
             Box::new(Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(1)),
-                Box::new(Node::Integer(2)),
+                Box::new(Node::Integer(BigInt::from(1))),
+                Box::new(Node::Integer(BigInt::from(2))),
             )),
         ));
         assert_eq!(
             evaluator.evaluate(),
-            Node::Lambda(1, Box::new(Node::Integer(3)))
+            Node::Lambda(
+                1,
+                Box::new(Node::BinaryOperator(
+                    "+".to_string(),
+                    Box::new(Node::Integer(BigInt::from(1))),
+                    Box::new(Node::Integer(BigInt::from(2)))
+                ))
+            )
         );
 
         let mut evaluator = Evaluator::new(Node::Lambda(
             1,
             Box::new(Node::BinaryOperator(
                 "+".to_string(),
-                Box::new(Node::Integer(1)),
+                Box::new(Node::Integer(BigInt::from(1))),
                 Box::new(Node::Variable(2)),
             )),
         ));
@@ -345,7 +395,7 @@ mod tests {
                 1,
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Integer(BigInt::from(1))),
                     Box::new(Node::Variable(2))
                 ))
             )
@@ -357,13 +407,13 @@ mod tests {
                 1,
                 Box::new(Node::BinaryOperator(
                     "+".to_string(),
-                    Box::new(Node::Integer(1)),
+                    Box::new(Node::Integer(BigInt::from(1))),
                     Box::new(Node::Variable(1)),
                 )),
             )),
-            Box::new(Node::Integer(42)),
+            Box::new(Node::Integer(BigInt::from(42))),
         ));
-        assert_eq!(evaluator.evaluate(), Node::Integer(43));
+        assert_eq!(evaluator.evaluate(), Node::Integer(BigInt::from(43)));
 
         let mut evaluator = Evaluator::new(Node::BinaryOperator(
             "$".to_string(),
@@ -380,11 +430,11 @@ mod tests {
                         )),
                     )),
                 )),
-                Box::new(Node::Integer(42)),
+                Box::new(Node::Integer(BigInt::from(42))),
             )),
-            Box::new(Node::Integer(43)),
+            Box::new(Node::Integer(BigInt::from(43))),
         ));
-        assert_eq!(evaluator.evaluate(), Node::Integer(85));
+        assert_eq!(evaluator.evaluate(), Node::Integer(BigInt::from(85)));
     }
 
     #[test]
@@ -410,7 +460,7 @@ mod tests {
                 node!(Node::BinaryOperator(
                     "$".to_string(),
                     node!(Node::Variable(1)),
-                    node!(Node::Integer(1)),
+                    node!(Node::Integer(BigInt::from(1))),
                 )),
             )),
             node!(Node::Lambda(
@@ -418,7 +468,7 @@ mod tests {
                 node!(Node::BinaryOperator(
                     "$".to_string(),
                     node!(Node::Variable(1)),
-                    node!(Node::Integer(2)),
+                    node!(Node::Integer(BigInt::from(2))),
                 )),
             )),
         ));
@@ -432,10 +482,10 @@ mod tests {
                     node!(Node::BinaryOperator(
                         "$".to_string(),
                         node!(Node::Variable(1)),
-                        node!(Node::Integer(2)),
+                        node!(Node::Integer(BigInt::from(2))),
                     )),
                 )),
-                node!(Node::Integer(1)),
+                node!(Node::Integer(BigInt::from(1))),
             )
         );
     }
@@ -482,7 +532,7 @@ mod tests {
                         node!(Node::BinaryOperator(
                             "=".to_string(),
                             node!(Node::Variable(2)),
-                            node!(Node::Integer(1)),
+                            node!(Node::Integer(BigInt::from(1))),
                         )),
                         node!(Node::Variable(1)),
                         node!(Node::BinaryOperator(
@@ -494,7 +544,7 @@ mod tests {
                                 node!(Node::BinaryOperator(
                                     "-".to_string(),
                                     node!(Node::Variable(2)),
-                                    node!(Node::Integer(1)),
+                                    node!(Node::Integer(BigInt::from(1))),
                                 )),
                             )),
                         )),
