@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use super::util::{convert_integer, convert_string};
+use super::util::{convert_integer, convert_string, deconvert_integer, deconvert_string};
 
 pub type PeekableIter<T> = Peekable<IntoIter<T>>;
 
@@ -21,15 +21,15 @@ pub enum Token {
 impl Token {
     pub fn to_string(&self) -> String {
         match self {
-            Token::Integer(value) => value.to_string(),
-            Token::Boolean(value) => value.to_string(),
-            Token::String(value) => value.to_string(),
-            Token::UnaryOperator(value) => value.to_string(),
-            Token::BinaryOperator(value) => value.to_string(),
-            Token::If => "If".to_string(),
-            Token::Lambda(value) => value.to_string(),
-            Token::Variable(value) => value.to_string(),
-            Token::Unknown(value) => value.to_string(),
+            Token::Integer(value) => format!("I{}", deconvert_integer(*value)),
+            Token::Boolean(value) => if *value { "T".to_string() } else { "F".to_string() },
+            Token::String(value) => format!("S{}", deconvert_string(value.to_string())),
+            Token::UnaryOperator(value) => format!("U{}", value),
+            Token::BinaryOperator(value) => format!("B{}", value),
+            Token::If => "?".to_string(),
+            Token::Lambda(value) => format!("L{}", deconvert_integer(*value)),
+            Token::Variable(value) => format!("v{}", deconvert_integer(*value)),
+            Token::Unknown(value) => format!("U{}", value),
         }
     }
 }
