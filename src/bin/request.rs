@@ -23,26 +23,6 @@ async fn main() {
         buffer
     };
     let text = text.trim();
-    let mut tokenizer = Tokenizer::new(text);
-    let tokens = tokenizer.tokenize();
-    let mut parser = Parser::new(&tokens);
-    let node = parser.parse();
-    let evaluator = Evaluator::new(node);
-    let result = evaluator.evaluate();
-    eprintln!("=== Result Start ===");
-    eprintln!("{:?}", result);
-    eprintln!("=== Result End ===");
-
-    let code = match result {
-        Node::String(code) => code,
-        _ => panic!("Result is not a string"),
-    };
-
-    let encoded = deconvert_string(code);
-    let ans = "S".to_string() + &encoded;
-    eprintln!("=== Ans Start ===");
-    eprintln!("{}", ans);
-    eprintln!("=== Ans End ===");
 
     dotenv().ok();
 
@@ -56,7 +36,7 @@ async fn main() {
         .post(API_URL)
         .header("Authorization", format!("Bearer {}", env.token))
         .header("Content-Type", "text/plain")
-        .body(ans)
+        .body(text.to_string())
         .send()
         .await;
 
@@ -66,6 +46,15 @@ async fn main() {
             eprintln!("=== Response Start ===");
             eprintln!("{}", body);
             eprintln!("=== Response End ===");
+            let tokens = Tokenizer::new(&body).tokenize();
+            let node = Parser::new(&tokens).parse();
+            let result = Evaluator::new(node).evaluate();
+            eprintln!("=== Result Start ===");
+            match result {
+                Node::String(s) => println!("{}", s),
+                _ => panic!("Unexpected result: {:?}", result),
+            }
+            eprintln!("=== Result End ===");
         }
         Err(e) => {
             eprintln!("Error: {:?}", e);

@@ -1,11 +1,11 @@
 use icfpc2024::{
     icfp::{
-        builtin::{repeat_operator, repeat_string, y_combinator},
+        builtin::{repeat_char, repeat_char_operator, y_combinator},
         parser::Node,
     },
     node,
 };
-use std::{collections::VecDeque, io::stdin};
+use std::{collections::VecDeque, io::stdin, iter::repeat};
 
 fn get_compress_collection(text: &str) -> VecDeque<(char, usize)> {
     let mut compress_collection = VecDeque::new();
@@ -43,27 +43,41 @@ fn main() {
         compress_collection: &mut VecDeque<(char, usize)>,
     ) -> Option<Node> {
         if let Some((c, count)) = compress_collection.pop_front() {
-            let operator = repeat_operator(c, count);
+            let mut compressing_str = String::new();
+            let mut final_c = c;
+            let mut final_count = count;
+            while final_count <= 12 {
+                compressing_str.push_str(&repeat(final_c).take(final_count).collect::<String>());
+                if let Some((next_c, next_count)) = compress_collection.pop_front() {
+                    final_c = next_c;
+                    final_count = next_count;
+                } else {
+                    break;
+                }
+            }
+            let operator = repeat_char_operator(final_c, final_count);
             let compressed_string_node =
                 Node::BinaryOperator("$".to_string(), node!(Node::Variable(0)), node!(operator));
-            let full_string_node = Node::String(c.to_string().repeat(count));
-            let string_node = if full_string_node.to_string().len()
-                <= compressed_string_node.to_string().len() + 4
+            let next_node = if let Some(child_compress_operation_node) =
+                generate_compress_operation_node(compress_collection)
             {
-                full_string_node
+                Node::BinaryOperator(
+                    ".".to_string(),
+                    node!(compressed_string_node),
+                    node!(child_compress_operation_node),
+                )
             } else {
                 compressed_string_node
             };
-            if let Some(child_compress_operation_node) =
-                generate_compress_operation_node(compress_collection)
-            {
-                Some(Node::BinaryOperator(
-                    ".".to_string(),
-                    node!(string_node),
-                    node!(child_compress_operation_node),
-                ))
+            if compressing_str.is_empty() {
+                Some(next_node)
             } else {
-                Some(string_node)
+                let concatenated_node = Node::BinaryOperator(
+                    ".".to_string(),
+                    node!(Node::String(compressing_str)),
+                    node!(next_node),
+                );
+                Some(concatenated_node)
             }
         } else {
             None
@@ -79,7 +93,7 @@ fn main() {
         node!(Node::BinaryOperator(
             "$".to_string(),
             node!(y_combinator()),
-            node!(repeat_string())
+            node!(repeat_char())
         )),
     ));
 

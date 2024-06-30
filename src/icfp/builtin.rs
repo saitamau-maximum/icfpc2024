@@ -50,7 +50,7 @@ pub fn y_combinator() -> Node {
 
 const BASE94: isize = 94;
 
-pub fn repeat_string() -> Node {
+pub fn repeat_char() -> Node {
     Node::Lambda(
         0,
         node!(Node::Lambda(
@@ -59,7 +59,7 @@ pub fn repeat_string() -> Node {
                 node!(Node::BinaryOperator(
                     ">".to_string(),
                     node!(Node::Variable(1)),
-                    node!(Node::Integer(BASE94 * 2)) // 1文字以上からじゃないと出力できないようにする（ICFPに空文字列が存在しないため）
+                    node!(Node::Integer(BASE94)) // 1文字以上からじゃないと出力できないようにする（ICFPに空文字列が存在しないため）
                 )),
                 node!(Node::BinaryOperator(
                     ".".to_string(),
@@ -81,28 +81,22 @@ pub fn repeat_string() -> Node {
                         ))
                     ))
                 )),
-                node!(Node::UnaryOperator(
-                    "$".to_string(),
-                    node!(Node::BinaryOperator(
-                        "%".to_string(),
-                        node!(Node::Variable(1)),
-                        node!(Node::Integer(BASE94))
-                    ))
-                )),
+                node!(Node::String("".to_string()))
             ))
         )),
     )
 }
 
-pub fn repeat_operator(value: char, times: usize) -> Node {
+pub fn repeat_char_operator(value: char, times: usize) -> Node {
     assert!(times >= 1);
     let value_id = STRING_ASCII.find(value).unwrap();
-    eprintln!("value_id: {}", value_id);
     Node::Integer(BASE94 * times as isize + value_id as isize)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::icfp::transpiler::Transpiler;
+
     use super::*;
 
     #[test]
@@ -112,20 +106,20 @@ mod tests {
             node!(Node::BinaryOperator(
                 "$".to_string(),
                 node!(y_combinator()),
-                node!(repeat_string())
+                node!(repeat_char())
             )),
-            node!(Node::Integer(BASE94 * 2 + 5))
+            node!(Node::Integer(BASE94 * 1 + 5))
         ));
         node.dump_tree(0);
         eprintln!("{}", node.to_string());
-        // let transpiler = Transpiler::new(node.as_ref().clone());
-        // let result = transpiler.transpile();
-        // eprintln!("{}", result);
+        let transpiler = Transpiler::new(node.as_ref().clone());
+        let result = transpiler.transpile();
+        eprintln!("{}", result);
     }
 
     #[test]
     fn test_repeat_operator() {
-        let node = repeat_operator('a', 3);
+        let node = repeat_char_operator('a', 3);
         assert_eq!(node, Node::Integer(282));
     }
 }
