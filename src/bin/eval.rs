@@ -14,12 +14,16 @@ fn main() {
     let result = tokenizer.tokenize();
     let mut parser = Parser::new(&result);
     let result = parser.parse();
-    let evaluator = Evaluator::new(result);
+    let mut evaluator = Evaluator::new(result);
     let result = evaluator.evaluate();
 
     match result {
         Node::String(s) => println!("{}", s),
         Node::Integer(n) => println!("{}", n),
-        _ => panic!("Unexpected result: {:?}", result),
+        _ => {
+            println!("=== unexpected result ===");
+            result.dump_tree(0);
+            panic!("Unexpected result: {:?}", result)
+        }
     }
 }

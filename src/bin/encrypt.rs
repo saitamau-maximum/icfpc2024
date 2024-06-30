@@ -7,6 +7,5 @@ fn main() {
         stdin().read_line(&mut buffer).unwrap();
         buffer
     };
-    let text = text.trim();
     println!("ENCRYPTED: S{}", deconvert_string(text.to_string()));
 }

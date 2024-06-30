@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 
 // =========== CONFIG ===========
 const API_URL: &str = "https://boundvariable.space/communicate";
-const COMMAND: &str = "get spaceship";
+const COMMAND: &str = "get lambdaman";
 const SAVE_DIR: &str = "downloads";
-const START_ID: usize = 22;
-const END_ID: usize = 25;
+const START_ID: usize = 9;
+const END_ID: usize = 9;
 // ==============================
 
 struct Env {
@@ -50,6 +50,7 @@ async fn main() {
         match res {
             Ok(res) => {
                 let body = res.text().await.unwrap();
+                eprintln!("body: {}", body);
                 let tokens = Tokenizer::new(&body).tokenize();
                 let node = Parser::new(&tokens).parse();
                 let result = Evaluator::new(node).evaluate();

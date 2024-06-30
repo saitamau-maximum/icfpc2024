@@ -2,7 +2,7 @@ use crate::icfp::util::{convert_integer, deconvert_integer, deconvert_string};
 
 use super::tokenizer::Token;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub enum Node {
     Integer(isize),
     String(String),
@@ -18,7 +18,16 @@ impl Node {
     pub fn dump_tree(&self, indent: usize) {
         match self {
             Node::Integer(value) => println!("{:indent$}Integer({})", "", value, indent = indent),
-            Node::String(value) => println!("{:indent$}String({})", "", value, indent = indent),
+            Node::String(value) => println!(
+                "{:indent$}String({})",
+                "",
+                if value == "\n" {
+                    "\\n".to_string()
+                } else {
+                    value.clone()
+                },
+                indent = indent
+            ),
             Node::Boolean(value) => println!("{:indent$}Boolean({})", "", value, indent = indent),
             Node::Variable(value) => println!("{:indent$}Variable({})", "", value, indent = indent),
             Node::UnaryOperator(operator, operand) => {
@@ -44,6 +53,50 @@ impl Node {
             Node::Lambda(arity, body) => {
                 println!("{:indent$}Lambda({})", "", arity, indent = indent);
                 body.dump_tree(indent + 2);
+            }
+        }
+    }
+
+    pub fn edump_tree(&self, indent: usize) {
+        match self {
+            Node::Integer(value) => eprintln!("{:indent$}Integer({})", "", value, indent = indent),
+            Node::String(value) => eprintln!(
+                "{:indent$}String({})",
+                "",
+                if value == "\n" {
+                    "\\n".to_string()
+                } else {
+                    value.clone()
+                },
+                indent = indent
+            ),
+            Node::Boolean(value) => eprintln!("{:indent$}Boolean({})", "", value, indent = indent),
+            Node::Variable(value) => {
+                eprintln!("{:indent$}Variable({})", "", value, indent = indent)
+            }
+            Node::UnaryOperator(operator, operand) => {
+                eprintln!("{:indent$}UnaryOperator({})", "", operator, indent = indent);
+                operand.edump_tree(indent + 2);
+            }
+            Node::BinaryOperator(operator, left, right) => {
+                eprintln!(
+                    "{:indent$}BinaryOperator({})",
+                    "",
+                    operator,
+                    indent = indent
+                );
+                left.edump_tree(indent + 2);
+                right.edump_tree(indent + 2);
+            }
+            Node::If(condition, then_branch, else_branch) => {
+                eprintln!("{:indent$}If", "", indent = indent);
+                condition.edump_tree(indent + 2);
+                then_branch.edump_tree(indent + 2);
+                else_branch.edump_tree(indent + 2);
+            }
+            Node::Lambda(arity, body) => {
+                eprintln!("{:indent$}Lambda({})", "", arity, indent = indent);
+                body.edump_tree(indent + 2);
             }
         }
     }
@@ -84,6 +137,19 @@ impl Node {
             .map(|token| token.to_string())
             .collect::<Vec<String>>()
             .join(" ")
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Node::Integer(_) => "Integer".to_string(),
+            Node::String(_) => "String".to_string(),
+            Node::Boolean(_) => "Boolean".to_string(),
+            Node::Variable(_) => "Variable".to_string(),
+            Node::UnaryOperator(operator, _) => format!("UnaryOperator({})", operator),
+            Node::BinaryOperator(operator, _, _) => format!("BinaryOperator({})", operator),
+            Node::If(_, _, _) => "If".to_string(),
+            Node::Lambda(arity, _) => format!("Lambda({})", arity),
+        }
     }
 }
 
