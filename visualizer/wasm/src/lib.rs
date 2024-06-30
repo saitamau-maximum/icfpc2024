@@ -1,6 +1,6 @@
 use svg::{
     self,
-    node::element::{Circle, Line},
+    node::element::{Circle, Group, Line, Title},
     Document,
 };
 use wasm_bindgen::prelude::*;
@@ -229,15 +229,20 @@ pub fn vis(_input: String, _output: String, turn: usize) -> Ret {
         if visited.iter().any(|&(x2, y2, _, _)| x == x2 && y == y2) {
             continue;
         }
-        let x = (x + max_range) as f64 * scale;
-        let y = (y + max_range) as f64 * scale_y;
+        let scaled_x = (x + max_range) as f64 * scale;
+        let scaled_y = (y + max_range) as f64 * scale_y;
+        // hoverしたらiと座標を表示するようにする
         svg = svg.add(
-            Circle::new()
-                .set("cx", x)
-                .set("cy", y)
-                .set("r", 5)
-                .set("fill", "blue"),
-        );
+            Group::new()
+                .add(Title::new().add(svg::node::Text::new(format!("{}: ({}, {})", i, x, y))))
+                .add(
+                    Circle::new()
+                        .set("cx", scaled_x)
+                        .set("cy", scaled_y)
+                        .set("r", 5)
+                        .set("fill", "blue"),
+                ),
+        )
     }
 
     // visitedを描画
