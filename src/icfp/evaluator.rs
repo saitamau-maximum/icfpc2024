@@ -22,7 +22,7 @@ impl Evaluator {
             Node::String(_) => node.clone(),
             Node::Boolean(_) => node.clone(),
             Node::Variable(_) => node.clone(),
-            Node::Lambda(arity, body) => Node::Lambda(*arity, Box::new(self.evaluate_node(body))),
+            Node::Lambda(arity, body) => Node::Lambda(*arity, body.clone()),
             Node::UnaryOperator(operator, operand) => {
                 self.evaluate_unary_operator(operator, *operand.clone())
             }
@@ -179,6 +179,16 @@ impl Evaluator {
                 let new_left = self.replace_variable(left, variables);
                 let new_right = self.replace_variable(right, variables);
                 Node::BinaryOperator(operator.clone(), Box::new(new_left), Box::new(new_right))
+            }
+            Node::If(condition, then_branch, else_branch) => {
+                let new_condition = self.replace_variable(condition, variables);
+                let new_then_branch = self.replace_variable(then_branch, variables);
+                let new_else_branch = self.replace_variable(else_branch, variables);
+                Node::If(
+                    Box::new(new_condition),
+                    Box::new(new_then_branch),
+                    Box::new(new_else_branch),
+                )
             }
             _ => panic!("Unsupported node: {:?}", node),
         }

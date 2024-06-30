@@ -19,6 +19,7 @@ fn main() {
 
     match result {
         Node::String(s) => println!("{}", s),
+        Node::Integer(n) => println!("{}", n),
         _ => panic!("Unexpected result: {:?}", result),
     }
 }
