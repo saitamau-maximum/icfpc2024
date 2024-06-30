@@ -5,6 +5,7 @@ use super::{
     util::{convert_string, INTEGER_ASCII},
 };
 
+#[macro_export]
 macro_rules! node {
     ($node:expr) => {
         Box::new($node)
