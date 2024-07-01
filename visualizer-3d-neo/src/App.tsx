@@ -12,7 +12,10 @@ function Cell(props: ICell) {
 
   return (
     <div
-      className="cell-container"
+      className={[
+        "cell-container",
+        !isNaN(parseInt(props.char)) ? "cell-number" : "",
+      ].join(" ")}
       onClick={() => setEditing(true)}
       onBlur={() => setEditing(false)}
     >
@@ -65,6 +68,8 @@ function App() {
   const [game, setGame] = useState<Game | null>(null);
   const [totalTurn, setTotalTurn] = useState(1);
   const [s, setS] = useState(1000);
+  const [a, setA] = useState(0);
+  const [b, setB] = useState(0);
   const [submitted, setSubmitted] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -94,10 +99,10 @@ function App() {
       const newMatrix = game?.matrix.map((row) =>
         row.concat(Array.from({ length: w - (game?.w || 0) }, () => "."))
       );
-      setGame(new Game(game?.h || 0, w, newMatrix));
+      setGame(new Game(game?.h || 0, w, a, b, newMatrix));
     } else {
       const newMatrix = game?.matrix.map((row) => row.slice(0, w));
-      setGame(new Game(game?.h || 0, w, newMatrix));
+      setGame(new Game(game?.h || 0, w, a, b, newMatrix));
     }
   };
 
@@ -108,10 +113,10 @@ function App() {
           Array.from({ length: game?.w || 0 }, () => ".")
         )
       );
-      setGame(new Game(h, game?.w || 0, newMatrix));
+      setGame(new Game(h, game?.w || 0, a, b, newMatrix));
     } else {
       const newMatrix = game?.matrix.slice(0, h);
-      setGame(new Game(h, game?.w || 0, newMatrix));
+      setGame(new Game(h, game?.w || 0, a, b, newMatrix));
     }
   };
 
@@ -119,12 +124,22 @@ function App() {
     const newMatrix = game?.matrix.map((row, r) =>
       row.map((cell, c) => (r === i && c === j ? char : cell))
     );
-    setGame(new Game(game?.h || 0, game?.w || 0, newMatrix));
+    setGame(new Game(game?.h || 0, game?.w || 0, a, b, newMatrix));
   };
 
   const updateTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newMatrix = e.target.value.split("\n").map((row) => row.split(" "));
-    setGame(new Game(newMatrix.length, newMatrix[0].length, newMatrix));
+    setGame(new Game(newMatrix.length, newMatrix[0].length, a, b, newMatrix));
+  };
+
+  const updatePlaceholder = (value: number, placeholder: "a" | "b") => {
+    if (placeholder === "a") {
+      setA(value);
+      setGame(new Game(game?.h || 0, game?.w || 0, value, b, game?.matrix));
+    } else {
+      setB(value);
+      setGame(new Game(game?.h || 0, game?.w || 0, a, value, game?.matrix));
+    }
   };
 
   const shift = (dir: "up" | "down" | "left" | "right") => {
@@ -145,7 +160,7 @@ function App() {
         return ".";
       })
     );
-    setGame(new Game(game?.h || 0, game?.w || 0, newMatrix));
+    setGame(new Game(game?.h || 0, game?.w || 0, a, b, newMatrix));
   };
 
   const computeMatrix = () => {
@@ -164,16 +179,16 @@ function App() {
 
   useEffect(() => {
     if (game) {
-      localStorage.setItem("game", game.to_string());
+      localStorage.setItem("game", game.to_json());
     }
   }, [game]);
 
   useEffect(() => {
     const savedGame = localStorage.getItem("game");
     if (savedGame) {
-      setGame(Game.from_string(savedGame));
+      setGame(Game.from_json(savedGame));
     } else {
-      setGame(new Game(10, 10));
+      setGame(new Game(10, 10, 0, 0));
     }
   }, []);
 
@@ -198,6 +213,20 @@ function App() {
           value={game?.w}
           onChange={(e) => updateWidth(parseInt(e.target.value))}
           id="w"
+        />
+        <label htmlFor="a">A: </label>
+        <input
+          type="number"
+          value={a}
+          onChange={(e) => updatePlaceholder(parseInt(e.target.value), "a")}
+          id="a"
+        />
+        <label htmlFor="b">B: </label>
+        <input
+          type="number"
+          value={b}
+          onChange={(e) => updatePlaceholder(parseInt(e.target.value), "b")}
+          id="b"
         />
       </p>
       <p className="form">
@@ -230,7 +259,7 @@ function App() {
       <p>Matrix:</p>
       <textarea
         className="matrix"
-        value={game?.to_string()}
+        value={game?.matrix.map((row) => row.join(" ")).join("\n")}
         onChange={updateTextarea}
       />
       <p>Shifter:</p>

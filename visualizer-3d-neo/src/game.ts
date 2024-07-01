@@ -3,6 +3,7 @@ const AVAILABLE_CHARS = ".0123456789<>^v+-*/%@=#SAB\n".split("");
 const ERRORS_KEYS = {
   CHAR_ERROR: (i: number, j: number) => `CHAR_ERROR(${i}-${j})`,
   CONFLICT_ERROR: (i: number, j: number) => `CONFLICT_ERROR(${i}-${j})`,
+  NUMBER_CELL_ERROR: (i: number, j: number) => `NUMBER_CELL_ERROR(${i}-${j})`,
   WARP_ERROR: "WARP_ERROR",
 };
 
@@ -12,6 +13,8 @@ const ERROR_MESSAGES = {
   CHAR_ERROR: (i: number, j: number) => `Invalid character in (${i}-${j})`,
   CONFLICT_ERROR: (i: number, j: number, inserted: string, existing: string) =>
     `Conflict in (${i}-${j}): inserted ${inserted}, existing ${existing}`,
+  NUMBER_CELL_ERROR: (i: number, j: number) =>
+    `Number cell in (${i}-${j})'s value must be from -99 to 99`,
   WARP_ERROR: "Multiple dt warps are not allowed",
 };
 
@@ -88,12 +91,16 @@ const isNumber = (s: string): boolean => {
 export class Game {
   private _h: number;
   private _w: number;
+  private _a: number;
+  private _b: number;
   private _matrix: string[][];
   private _errors: Map<string, string> = new Map();
 
-  constructor(h: number, w: number, matrix?: string[][]) {
+  constructor(h: number, w: number, a: number, b: number, matrix?: string[][]) {
     this._h = h;
     this._w = w;
+    this._a = a;
+    this._b = b;
     this._matrix =
       matrix ??
       Array.from({ length: h }, () => Array.from({ length: w }, () => "."));
@@ -130,6 +137,21 @@ export class Game {
         }
       });
     });
+
+    // 初期盤面には-99から99までの範囲外の数字は含められない
+    this.matrix.forEach((row, i) => {
+      row.forEach((cell, j) => {
+        if (isNumber(cell)) {
+          const n = parseInt(cell, 10);
+          if (n < -99 || n > 99) {
+            this._errors.set(
+              ERRORS_KEYS.NUMBER_CELL_ERROR(i, j),
+              ERROR_MESSAGES.NUMBER_CELL_ERROR(i, j)
+            );
+          }
+        }
+      });
+    });
   }
 
   private copyMatrix(): string[][] {
@@ -156,7 +178,17 @@ export class Game {
       }
     }
     let current_matrix = this.copyMatrix();
-    let history: string[][][] = [this.copyMatrix()];
+    // 最初にA,Bを適用
+    current_matrix.forEach((row, i) => {
+      row.forEach((cell, j) => {
+        if (cell === "A") {
+          current_matrix[i][j] = this._a.toString();
+        } else if (cell === "B") {
+          current_matrix[i][j] = this._b.toString();
+        }
+      });
+    });
+    let history: string[][][] = [current_matrix.map((row) => row.slice())];
 
     let curT = 1;
     while (curT < t) {
@@ -410,18 +442,18 @@ export class Game {
     return current_matrix;
   }
 
-  to_string(): string {
-    return this.matrix.map((row) => row.join("")).join("\n");
+  to_json() {
+    return JSON.stringify({
+      h: this.h,
+      w: this.w,
+      a: this._a,
+      b: this._b,
+      matrix: this.matrix,
+    });
   }
 
-  static from_string(s: string): Game {
-    const lines = s.split("\n");
-    const h = lines.length;
-    const w = lines[0].length;
-    const matrix = Array.from({ length: h }, (_, i) =>
-      Array.from({ length: w }, (_, j) => lines[i][j])
-    );
-
-    return new Game(h, w, matrix);
+  static from_json(json: string) {
+    const obj = JSON.parse(json);
+    return new Game(obj.h, obj.w, obj.a, obj.b, obj.matrix);
   }
 }
