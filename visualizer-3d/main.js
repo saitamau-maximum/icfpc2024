@@ -265,7 +265,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
 
       if (dts !== undefined) {
-        if (turn - dts >= 0) {
+        if (turn - dts - 1 >= 0) {
           const [dt, darr] = GridTimeArr[turn - dts - 1];
           next = Array.from({ length: h }, () => Array.from({ length: w }, () => "."));
           for (let i = 0; i < h; i++) {
@@ -300,6 +300,10 @@ window.addEventListener("DOMContentLoaded", () => {
           }
 
           nextt = dt;
+        }
+        else {
+          err.textContent = `Invalid move at time ${turn}: Invalid dt`;
+          return;
         }
       }
 
