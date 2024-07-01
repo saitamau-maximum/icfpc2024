@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rand::Rng;
 
-use std::{i32::MAX, io::stdin, ops, time};
+use std::{i64::MAX, io::stdin, ops, time};
 
 struct Input {
     pos: Vec<(i32, i32)>,
@@ -44,6 +44,7 @@ fn two_opt_swap(tour: &mut Vec<usize>, i: usize, k: usize) {
 
 // 焼きなまし
 fn simulated_annealing(
+    initial_tour: &[usize],
     points: &[Point],
     initial_temp: f64,
     cooling_rate: f64,
@@ -51,8 +52,9 @@ fn simulated_annealing(
 ) -> Vec<usize> {
     let mut rng = thread_rng();
     let n = points.len();
-    let mut tour: Vec<usize> = (0..n).collect();
-    tour.shuffle(&mut rng);
+    // let mut tour: Vec<usize> = (0..n).collect();
+    // tour.shuffle(&mut rng);
+    let mut tour = initial_tour.to_vec();
 
     let mut best_tour = tour.clone();
     let mut best_distance = total_distance(points, &tour);
@@ -116,17 +118,30 @@ fn greedy(points: &[Point], from: (i32, i32)) -> Vec<usize> {
 fn eval(goal: (i32, i32), pos: (i32, i32), vel: (i32, i32)) -> i32 {
     let dx = goal.0 - pos.0;
     let dy = goal.1 - pos.1;
-    // dx * dx + dy * dy + (vel.0 * vel.0 + vel.1 * vel.1).pow(2)
-    dx * dx + dy * dy + (vel.0 * vel.0 + vel.1 * vel.1).pow(4)
+    let (dx, dy) = (dx as f64, dy as f64);
+    let (vx, vy) = (vel.0 as f64, vel.1 as f64);
+    // 速度を0まで減速して行った時にかかる時間
+    let (stop_dist_vx, stop_dist_vy) = (vx * (vx + 1.0) / 2.0, vy * (vy + 1.0) / 2.0);
+    (dx * dx + dy * dy + (((stop_dist_vx - dx).powi(2) + (stop_dist_vy - dy).powi(2).sqrt()))) as i32
+    // (dx * dx + dy * dy + vx * vx + vy * vy).sqrt() as i32
+    // (dx * dx + dy * dy + (vx * vx + vy * vy).powf(2.0)).sqrt() as i32
+    // (dx * dx + dy * dy + (vx * vx + vy * vy).powf(3.0)).sqrt() as i32
+    // dx * dx + dy * dy + (vel.0 * vel.0 + vel.1 * vel.1).pow(4)
     // dx * dx + dy * dy + ((vel.0 * vel.0 + vel.1 * vel.1) as f64).sqrt() as i32
 }
 
 fn main() {
-    let initial_temp = 1e3;
+    // let initial_temp = 1e1;
+    // let cooling_rate = 1e-3 * 5.0;
+    // let max_iter = 1e5;
+    // let through_speed_limit = 1e8;
+    // let beam_width = 1e3;
+
+    let initial_temp = 1e4;
     let cooling_rate = 1e-4;
-    let max_iter = 1e6;
-    let through_speed_limit = 1e6;
-    let beam_width = 1e6;
+    let max_iter = 1e5;
+    let through_speed_limit = 1e8;
+    let beam_width = 1e4;
 
     let mut input = Input { pos: vec![] };
     loop {
@@ -143,11 +158,12 @@ fn main() {
     }
 
     // input.posをTSPで巡回する。初期点は(0, 0)からの最短距離の点
-    let start_pos = (0, 0);
+    let start_pos: (i32, i32) = (0, 0);
     let mut min_dist = MAX;
     let mut min_pos = (-1, -1);
     for i in 0..input.pos.len() {
-        let dist = (input.pos[i].0 - start_pos.0).pow(2) + (input.pos[i].1 - start_pos.1).pow(2);
+        let dist = ((input.pos[i].0 - start_pos.0) as i64).pow(2)
+            + ((input.pos[i].1 - start_pos.1) as i64).pow(2);
         if dist < min_dist {
             min_dist = dist;
             min_pos = (input.pos[i].0, input.pos[i].1);
@@ -165,9 +181,10 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    // let tour = simulated_annealing(&points, initial_temp, cooling_rate, max_iter);
-    let tour = greedy(&points, start_pos);
     let greedy_tour = greedy(&points, start_pos);
+    let tour = simulated_annealing(&greedy_tour, &points, initial_temp, cooling_rate, max_iter);
+    // let tour = greedy_tour.clone();
+    // let tour = greedy(&points, start_pos);
 
     let path = vec![]
         .into_iter()
@@ -289,11 +306,21 @@ fn main() {
             next_beam.truncate(beam_width as usize);
             beam = next_beam;
             // if beam[0].pos == next {
-            eprintln!("pos: {:?} vel: {:?} score: {}", beam[0].pos, beam[0].vel, beam[0].score);
-            if beam[0].pos == next
-                && ((beam[0].vel.0.pow(2) + beam[0].vel.1.pow(2)) as f64).sqrt()
-                    <= through_speed_limit
-            {
+            eprintln!(
+                "pos: {:?} vel: {:?} score: {} width: {}",
+                beam[0].pos,
+                beam[0].vel,
+                beam[0].score,
+                beam.len()
+            );
+            // if beam[0].pos == next
+            //     && ((beam[0].vel.0.pow(2) + beam[0].vel.1.pow(2)) as f64).sqrt()
+            //         <= through_speed_limit
+            // {
+            //     vel = beam[0].vel;
+            //     break;
+            // }
+            if beam[0].score == 0 {
                 vel = beam[0].vel;
                 break;
             }
